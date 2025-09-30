@@ -1,0 +1,84 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx} 
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{titlesec}
+
+\geometry{margin=1in}
+\setstretch{1.2}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+
+
+\title{CPU Simulator 
+MIPS Pipeline Architecture}
+\author{Raluca-Mihaela Adam}
+\date{September 2025}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+\subsection{Context}
+This project proposes the development of a CPU simulator based on the MIPS (Microprocessor without Interlocked Pipeline Stages) pipeline architecture, a classic teaching model in computer architecture. The simulator will reproduce the 5-stage pipeline, visualize the instruction flow, and highlight hazards and performance aspects. Beyond technical simulation, the tool will be designed to support teaching, learning, and debugging by providing an interactive and intuitive visualization of pipeline behavior using a graphical user interface.
+\subsection{Objectives}
+The specific objectives of the project are described below.
+\begin{itemize}
+    \item Simulate at least 15 MIPS instructions (R, I, and J types).
+    \item Model the 5 pipeline stages (IF, ID, EX, MEM, WB).
+    \item Handle hazards (data, control, structural).
+    \item Provide a GUI for visualization of the pipeline stages, registers, memory, flag information (branch/jump), arithmetic logic unit operation codes, register file contents.
+    \item Follow the principles of software engineering for maintainability and scalability.
+\end{itemize}
+\subsection{Implementation details}
+The project will be implemented using Java for the back-end (execution engine) and Next.js for the front-end (user interface), ensuring a clear separation of concerns.
+
+\newpage
+
+\section{Bibliographic Research}
+\subsection{Importance of CPU Pipelining}
+The performance of a Processor is determined by its Critical Path, Clock Cycle Time and cycles per instruction (CPI). The single-cycle processor had the advantage of simplicity and clarity; however, because instructions take different times to execute, functional units are not efficiently utilized, causing a performance bottleneck. The purpose of pipelining is to achieve better performance. It improves instruction throughput by allowing multiple instructions to be processed simultaneously at different stages. According to Patterson and Hennessy \cite{patterson2014}, pipelining reduces idle CPU time but introduces hazards such as structural, data, and control hazards. Understanding these hazards and their resolution mechanisms is essential for both CPU design and educational purposes.
+
+\subsection{MIPS Architecture and Pipelining - scrie si despre executia concurenta si asa}
+The 5-stage MIPS pipeline (Instruction Fetch, Instruction Decode, Execute, Memory, Write Back) 
+serves as the building block of the simulation. Hazards such as data, structural, and control 
+hazards are central to pipeline operation and must be represented in the simulator.
+
+\subsection{Existing Tools - de rescris mai frumos si de citit}
+Several existing simulators such as MARS and SPIM are widely used to run MIPS assembly code. 
+However, these do not provide detailed visualization of pipeline execution. This project 
+seeks to fill that gap with a didactic approach. 
+
+\subsection{Software Design - despre principiile soft de implementare}
+
+\newpage
+
+\section{Bibliography}
+\begin{thebibliography}{9}
+
+\bibitem{patterson2014}
+D. A. Patterson, J. L. Hennessy, 
+\textit{Computer Organization and Design: The Hardware/Software Interface}, 
+5th ed., Morgan Kaufmann, 2014.
+
+\bibitem{mars}
+MARS MIPS Simulator, 
+\url{http://courses.missouristate.edu/kenvollmar/mars/} (accessed September 2025).
+
+\bibitem{cornell}
+MIPS Pipeline - Cornell: Computer Science, 
+\url{https://www.cs.cornell.edu/courses/cs3410/2012sp/lecture/09-pipelined-cpu-i-g.pdf} (accessed September 2025).
+
+\end{thebibliography}
+
+\end{document}
