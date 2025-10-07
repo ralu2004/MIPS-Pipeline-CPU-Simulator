@@ -9,6 +9,8 @@
 
 \geometry{margin=1in}
 \setstretch{1.2}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
 
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
@@ -21,7 +23,33 @@ MIPS Pipeline Architecture}
 
 \begin{document}
 
-\maketitle
+\begin{titlepage}
+    \centering
+
+    {\Large Technical University of Cluj-Napoca \par}
+    \vspace{0.3cm}
+
+    {\large Department of Computer Science \par}
+    \vspace{0.5cm}
+
+    \rule{\linewidth}{0.5mm}  
+    \vspace{1cm}
+    
+    {\Huge \bfseries CPU Simulator\\[0.3cm] MIPS Pipeline Architecture \par}
+    \vspace{1cm}
+
+    \rule{\linewidth}{0.5mm}  
+    \vspace{2cm}
+    
+    {\Large Raluca-Mihaela Adam \par}
+    \vspace{1cm}
+
+    {\Large September 2025 \par}
+    \vfill
+\end{titlepage}
+
+
+%\maketitle
 \newpage
 
 \tableofcontents
@@ -30,36 +58,36 @@ MIPS Pipeline Architecture}
 \section{Introduction}
 
 \subsection{Context}
-This project proposes the development of a CPU simulator based on the MIPS (Microprocessor without Interlocked Pipeline Stages) pipeline architecture, a classic teaching model in computer architecture. The simulator will reproduce the 5-stage pipeline, visualize the instruction flow, and highlight hazards and performance aspects. Beyond technical simulation, the tool will be designed to support teaching, learning, and debugging by providing an interactive and intuitive visualization of pipeline behavior using a graphical user interface.
+Modern computer architecture relies on pipelining to achieve high performance. The MIPS (Microprocessor without Interlocked Pipeline Stages) architecture represents a standard teaching model to understand how pipelining works at a fundamental level.
+
+This project aims to develop an educational CPU simulator that mimics the 5-stage MIPS pipeline. It will visualize instruction flow, detect and display hazards, and help users understand the dynamics of parallel execution inside a CPU. Beyond instruction execution, the simulator focuses on clarity, interactivity, and learning support through a graphical interface.
+
 \subsection{Objectives}
-The specific objectives of the project are described below.
-\begin{itemize}
-    \item Simulate at least 15 MIPS instructions (R, I, and J types).
-    \item Model the 5 pipeline stages (IF, ID, EX, MEM, WB).
-    \item Handle hazards (data, control, structural).
-    \item Provide a GUI for visualization of the pipeline stages, registers, memory, flag information (branch/jump), arithmetic logic unit operation codes, register file contents.
-    \item Follow the principles of software engineering for maintainability and scalability.
-\end{itemize}
-\subsection{Implementation details}
-The project will be implemented using Java for the back-end (execution engine) and Next.js for the front-end (user interface), ensuring a clear separation of concerns.
+The application's execution engine will be implemented in Java, while the user interface will be developed using the Next.js web framework, following the principles of software engineering for maintainability and scalability. The graphical user interface will model the 5 pipeline stages (IF, ID, EX, MEM, WB) interactively, showcasing the functional simulation of at least 15 MIPS instructions (R, I, and J types). Besides the pipeline stages, the registers, memory, flag information (branch/jump), arithmetic logic unit operation codes, and register file contents will be displayed during the simulation. The user will be able to run their own sequence of instructions, or choose from a few available test programs.
 
 \newpage
 
 \section{Bibliographic Research}
 \subsection{Importance of CPU Pipelining}
-The performance of a Processor is determined by its Critical Path, Clock Cycle Time and cycles per instruction (CPI). The single-cycle processor had the advantage of simplicity and clarity; however, because instructions take different times to execute, functional units are not efficiently utilized, causing a performance bottleneck. The purpose of pipelining is to achieve better performance. It improves instruction throughput by allowing multiple instructions to be processed simultaneously at different stages. According to Patterson and Hennessy \cite{patterson2014}, pipelining reduces idle CPU time but introduces hazards such as structural, data, and control hazards. Understanding these hazards and their resolution mechanisms is essential for both CPU design and educational purposes.
+The performance of a processor depends on factors like clock speed, critical path length, and cycles per instruction (CPI). A single-cycle CPU executes one instruction per clock cycle, making the design simple but inefficient, because not all instructions take the same amount of time. Pipelining addresses this limitation by allowing multiple instructions to be processed simultaneously at different stages. It is designed for throughput. According to Patterson and Hennessy \cite{patterson2014}, pipelining significantly increases performance but introduces hazards - structural, data, and control hazards - which must be detected and resolved for correctness.
 
-\subsection{MIPS Architecture and Pipelining - scrie si despre executia concurenta si asa}
-The 5-stage MIPS pipeline (Instruction Fetch, Instruction Decode, Execute, Memory, Write Back) 
-serves as the building block of the simulation. Hazards such as data, structural, and control 
-hazards are central to pipeline operation and must be represented in the simulator.
+\subsection{MIPS Architecture and Pipelining}
+The MIPS Architecture is a reduced instruction set computer (RISC) design. Its pipeline implementation consists of 5 execution stages - Instruction Fetch, Instruction Decode, Execute, Memory, and Write Back - which enable the parallel processing of multiple instructions. 
 
-\subsection{Existing Tools - de rescris mai frumos si de citit}
-Several existing simulators such as MARS and SPIM are widely used to run MIPS assembly code. 
-However, these do not provide detailed visualization of pipeline execution. This project 
-seeks to fill that gap with a didactic approach. 
+In a simulator, true parallel execution is not possible; however, emulation is possible by modeling the state of each stage and advancing the instructions step by step. The goal is to create the illusion of concurrency while preserving accuracy in time and hazard detection.
 
-\subsection{Software Design - despre principiile soft de implementare}
+\subsection{Existing Tools}
+Several existing simulators such as MARS \cite{mars} and SPIM \cite{spim} are widely used to run MIPS assembly code. However, they do not provide a detailed visualization of pipeline execution.
+
+This project aims to provide a slightly different perspective by creating an interactive, educational simulator that focuses on how instructions move through the pipeline and how hazards affect performance.
+
+\subsection{Software Design Consideration}
+The simulator will follow object-oriented design principles such as modularity, encapsulation, and separation of concerns. The architecture will clearly separate:
+\begin{itemize}
+    \item the execution engine (responsible for instruction handling and pipeline state),
+    \item the data model (registers, memory, instructions), and
+    \item the user interface layer (for visualization and user interaction).
+\end{itemize}
 
 \newpage
 
@@ -73,12 +101,17 @@ D. A. Patterson, J. L. Hennessy,
 
 \bibitem{mars}
 MARS MIPS Simulator, 
-\url{http://courses.missouristate.edu/kenvollmar/mars/} (accessed September 2025).
+\url{http://courses.missouristate.edu/kenvollmar/mars/} [accessed September 2025].
+
+\bibitem{spim}
+SPIM MIPS Simulator, 
+\url{https://pages.cs.wisc.edu/~larus/spim.html} [accessed September 2025].
 
 \bibitem{cornell}
 MIPS Pipeline - Cornell: Computer Science, 
-\url{https://www.cs.cornell.edu/courses/cs3410/2012sp/lecture/09-pipelined-cpu-i-g.pdf} (accessed September 2025).
+\url{https://www.cs.cornell.edu/courses/cs3410/2012sp/lecture/09-pipelined-cpu-i-g.pdf} [accessed September 2025].
 
 \end{thebibliography}
+
 
 \end{document}
