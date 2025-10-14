@@ -1,87 +1,143 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[a4paper,12pt]{report}
 
+\usepackage{graphicx}
 \usepackage[utf8]{inputenc}
-\usepackage{geometry}
-\usepackage{graphicx} 
+\usepackage[margin=2cm]{geometry}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{xcolor}
 \usepackage{hyperref}
-\usepackage{setspace}
-\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
+%\usepackage{verbatim}
+%\usepackage{mdframed}
+%\usepackage{algorithmic}
+%\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 
-\geometry{margin=1in}
-\setstretch{1.2}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\bibliography{citations}
+
+\lstdefinestyle{lstcustom}{
+backgroundcolor=\color{backcolour},
+commentstyle=\color{codegreen},
+keywordstyle=\color{magenta},
+numberstyle=\tiny\color{codegray},
+stringstyle=\color{codepurple},
+basicstyle=\ttfamily\footnotesize,
+breakatwhitespace=false,
+breaklines=true,
+captionpos=b,
+keepspaces=true,
+numbers=left,
+numbersep=5pt,
+showspaces=false,
+showstringspaces=false,
+showtabs=false,
+tabsize=2
+}
+\lstset{style=lstcustom}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.5em}
-
-\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
-\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
-
-
-\title{CPU Simulator 
-MIPS Pipeline Architecture}
-\author{Raluca-Mihaela Adam}
-\date{September 2025}
 
 \begin{document}
 
-\begin{titlepage}
-    \centering
-
-    {\Large Technical University of Cluj-Napoca \par}
-    \vspace{0.3cm}
-
-    {\large Department of Computer Science \par}
-    \vspace{0.5cm}
-
-    \rule{\linewidth}{0.5mm}  
+\vspace{-5cm}
+\begin{center}
+    Department of Computer Science\\
+    Technical University of Cluj-Napoca\\
+    \includegraphics[width=10cm]{fig/footer}
+    \end{center}
     \vspace{1cm}
-    
-    {\Huge \bfseries CPU Simulator\\[0.3cm] MIPS Pipeline Architecture \par}
+    \begin{center}
+    \begin{Large}
+     \textbf{CPU Simulator}\\
+    \end{Large}
+    \textit{MIPS Pipeline Architecture}\\
+    \vspace{3cm}
+    Name:\ Raluca-Mihaela Adam\\
+    Group:\ 30422\\
+    Email:\ adam.ra.raluca@student.utcluj.ro\\
+    \vspace{12cm}
+    Teaching Assistant: Dragos Lazea\\
     \vspace{1cm}
-
-    \rule{\linewidth}{0.5mm}  
-    \vspace{2cm}
-    
-    {\Large Raluca-Mihaela Adam \par}
-    \vspace{1cm}
-
-    {\Large September 2025 \par}
-    \vfill
-\end{titlepage}
-
-
-%\maketitle
-\newpage
+    \includegraphics[width=10cm]{fig/footer}
+\end{center}
 
 \tableofcontents
-\newpage
 
-\section{Introduction}
+\chapter{Introduction}\label{ch:arch}
 
-\subsection{Context}
-The aim of this project is to develop an educational CPU simulation software that mimics the 5-stage MIPS (Microprocessor without Interlocked Pipeline Stages) pipeline based on the 32-bit MIPS Instruction Set Architecture (ISA).
+\section{Context}
+This project aims to develop an educational CPU simulation software that mimics the 5-stage MIPS (Microprocessor without Interlocked Pipeline Stages) pipeline based on the 32-bit MIPS Instruction Set Architecture (ISA).
 
 The simulator will visualize the flow of instruction through the MIPS pipeline, detect and display hazards, and help users understand the dynamics of parallel execution inside a CPU through a graphical user interface.
 
-\subsection{Objectives}
-The application's execution engine will be implemented in Java, while the user interface will be developed using the Next.js web framework, following the principles of software engineering for maintainability and scalability. The graphical user interface will model the 5 pipeline stages (IF, ID, EX, MEM, WB) interactively, showcasing the functional simulation of at least 15 MIPS instructions (R, I, and J types). In addition to the pipeline stages, the registers, memory, flag information (branch/jump), arithmetic logic unit operation codes, and register file contents will be displayed during the simulation. The user will be able to run their own sequence of instructions or choose from a few available test programs.
+\section{Problem and Motivation}
 
-\newpage
+In traditional computer architecture courses, students often struggle to understand the functioning of the CPU pipeline and the types of hazards that arise during instruction execution. Existing tools, such as MARS and SPIM simulators, allow users to run MIPS assembly programs but do not provide an intuitive visualization of how instructions propagate through the pipeline.
 
-\section{Bibliographic Research}
-\subsection{Importance of CPU Pipelining}
+This project addresses this educational gap by providing a visual simulation software that demonstrates how instructions overlap inside a pipeline, how hazards occur, and how forwarding or stalling mechanisms resolve them in an interactive and easy-to-follow manner.
+
+\section{Objectives and Proposed Solution}
+
+The proposed application will consist of:
+\begin{itemize}
+    \item An execution engine that simulates the MIPS instruction flow and pipeline stages.
+    \item An intuitive graphical user interface for interactive visualization that allows users to either input custom instructions or select predefined programs.
+    \item The possibility to simulate at least 15 MIPS instructions (R, I, and J types).
+    \item Real-time visualization of the 5 pipeline stages (IF, ID, EX, MEM, WB).
+    \item Display of registers, memory contents, ALU operations, and control flags.
+\end{itemize}
+
+\section{Project Timeline and Plan}
+
+The development of the MIPS 32 Simulator will follow a structured timeline, as presented below:
+
+\begin{itemize}
+    \item \textbf{Meeting 2:}  
+    Documentation phase — prepare the project introduction, bibliographic research, bibliography, and project plan. Establish the main objectives and overall development strategy.
+    
+    \item \textbf{Meeting 3:}  
+    Analysis and \textbf{Design Phase 1} — describe the system architecture, main modules, and component interactions. Provide an initial view of the implementation.
+    
+    \item \textbf{Meeting 4:}  
+    Updated design and \textbf{back-end implementation} — refine the architecture based on feedback and corrections. Begin coding the back-end, defining class structures, storage mechanisms, and pipeline simulation logic.
+    
+    \item \textbf{Meeting 5:}  
+    Finalize the back-end implementation. Begin developing the \textbf{front-end} to visualize the pipeline stages and display simulation data in real time.
+    
+    \item \textbf{Meeting 6:}  
+    \textbf{Testing and validation} — verify functionality through unit and integration tests.
+    
+    \item \textbf{Meeting 7:}  
+    \textbf{Final demo and presentation} — deliver the complete simulator, full documentation, and the final presentation showcasing the system’s capabilities.
+\end{itemize}
+
+
+\chapter{Bibliographic Research}\label{ch:arch}
+\section{Importance of CPU Pipelining}
 The performance of a processor depends on factors such as clock speed, critical path length, and cycles per instruction (CPI). A single-cycle CPU executes one instruction per clock cycle, making the design simple but inefficient because not all instructions take the same amount of time. Pipelining addresses this limitation by allowing multiple instructions to be processed simultaneously at different stages. The pipeline architecture is designed for throughput, increasing CPU performance, but introduces hazards - structural, data, and control hazards - that must be detected and resolved for correctness.
 
-\subsection{MIPS Architecture and Pipelining}
-The MIPS Architecture is a reduced instruction set computer (RISC) design. Its pipeline implementation consists of 5 execution stages, Instruction Fetch, Instruction Decode, Execute, Memory, and Write Back, which enable the parallel processing of multiple instructions. 
+\section{MIPS Architecture and Pipelining}
+The MIPS Architecture is a reduced instruction set computer (RISC) design. Its pipeline implementation consists of 5 execution stages: Instruction Fetch, Instruction Decode, Execute, Memory, and Write Back, which enable the parallel processing of multiple instructions. 
 
 In a software simulator, true parallel execution is not possible; however, an event-based software architecture can create the illusion of concurrency while preserving accuracy in time and hazard detection.
 
-\subsection{Existing Tools}
-Several existing simulators such as MARS \cite{mars} and SPIM \cite{spim} are widely used to run MIPS assembly code. However, they do not provide a detailed visualization of pipeline execution.
+\section{Existing Tools}
+Several existing MIPS simulators are available:
+\begin{itemize}
+    \item \textbf{MARS} \cite{mars} — A Java-based MIPS simulator commonly used in academia. It supports assembly code execution, but is limited by poor visualisation of the pipeline.
+    \item \textbf{SPIM} \cite{spim} — One of the earliest MIPS simulators. It is focused mainly on instruction correctness rather than pipeline-level execution.
+\end{itemize}
 
-This project aims to provide a slightly different perspective by creating an interactive, educational simulator that focuses on how instructions move through the pipeline and how hazards affect performance.
+In \cite{cornell}, the authors present a comprehensive theoretical explanation of the MIPS pipeline and the types of hazards, but without an interactive or visual component. 
+As a general observation, all of the existing solutions above suffer from a lack of visual representation. Thus, this project aims to provide a slightly different perspective by creating an interactive, educational simulator that focuses on how instructions move through the pipeline and how hazards affect performance.
 
-\subsection{Software Design Considerations}
+\section{Software Design Considerations}
 The simulator will follow object-oriented design principles such as modularity, encapsulation, and separation of concerns. The architecture will clearly separate:
 \begin{itemize}
     \item the execution engine (responsible for instruction handling and pipeline state),
@@ -89,29 +145,13 @@ The simulator will follow object-oriented design principles such as modularity, 
     \item the user interface layer (for visualization and user interaction).
 \end{itemize}
 
-\newpage
+\printbibliography
+\nocite{*}
 
-\section{Bibliography}
-\begin{thebibliography}{9}
-
-\bibitem{patterson2014}
-D. A. Patterson, J. L. Hennessy, 
-\textit{Computer Organization and Design: The Hardware/Software Interface}, 
-5th ed., Morgan Kaufmann, 2014.
-
-\bibitem{mars}
-MARS MIPS Simulator, 
-\url{https://computerscience.missouristate.edu/mars-mips-simulator.htm} [accessed October 2025].
-
-\bibitem{spim}
-SPIM MIPS Simulator, 
-\url{https://pages.cs.wisc.edu/~larus/spim.html} [accessed October 2025].
-
-\bibitem{cornell}
-MIPS Pipeline - Cornell: Computer Science, 
-\url{https://www.cs.cornell.edu/courses/cs3410/2012sp/lecture/09-pipelined-cpu-i-g.pdf} [accessed October 2025].
-
-\end{thebibliography}
-
+\vspace{2cm}
+\begin{center}
+  Distributed systems (DS)\\
+  \includegraphics[width=10cm]{fig/footer}
+\end{center}
 
 \end{document}
