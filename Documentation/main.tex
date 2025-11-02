@@ -7,9 +7,16 @@
 \usepackage{color}
 \usepackage{xcolor}
 \usepackage{hyperref}
-\usepackage{graphicx}
+\usepackage{tabularx}
 \usepackage{rotating}
+\usepackage{amsmath}
+\usepackage{float}
 \usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
+\usepackage{colortbl}
+\definecolor{headerblue}{RGB}{79,129,189}
+\usepackage{tikz}
+\usepackage{pdflscape}
+\usetikzlibrary{shapes, arrows, positioning}
 %\usepackage{verbatim}
 %\usepackage{mdframed}
 %\usepackage{algorithmic}
@@ -19,6 +26,15 @@
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=black,
+    pdfborder={0 0 0} 
+}
 
 \bibliography{citations}
 
@@ -144,6 +160,460 @@ The simulator will follow object-oriented design principles such as modularity, 
     \item the data model (registers, memory, instructions), and
     \item the user interface layer (for visualization and user interaction).
 \end{itemize}
+
+
+\chapter{Analysis}\label{ch:analysis}
+
+This chapter presents the theoretical foundations for the MIPS CPU simulator, detailing the hardware concepts and architectural mechanisms that will be modeled. The analysis covers the MIPS pipeline structure, instruction execution mechanics, hazard detection, and resolution techniques that form the conceptual basis for the simulator implementation.
+
+\section{MIPS Pipeline Architecture}
+
+\subsection{Pipeline Structure and Stage Definition}
+The MIPS pipeline employs a five-stage architecture designed to maximize instruction throughput by enabling concurrent processing of multiple instructions. As illustrated in Figure~\ref{fig:pipeline}, each stage performs specialized operations while maintaining data flow through pipeline registers.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{fig/pipeline.png}
+    \caption{General structure of the 5-stage MIPS pipeline~\cite{website}.}
+    \label{fig:pipeline}
+\end{figure}
+
+The five stages operate as follows:
+\begin{itemize}
+    \item \textbf{Instruction Fetch (IF):} Retrieves instructions from memory using the program counter and increments PC
+    \item \textbf{Instruction Decode (ID):} Decodes instruction fields, reads register values, and generates control signals
+    \item \textbf{Execute (EX):} Performs arithmetic/logical operations and calculates memory addresses
+    \item \textbf{Memory Access (MEM):} Handles data memory reads/writes for load/store instructions
+    \item \textbf{Write Back (WB):} Writes results back to the register file
+\end{itemize}
+
+\subsection{Instruction Parallelism}
+The pipeline achieves performance gains through instruction-level parallelism, where multiple instructions occupy different stages simultaneously. Figure~\ref{fig:instructions_pipeline} demonstrates this overlapping execution pattern, showing how the pipeline maintains a steady flow of instruction completion once initially filled.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{fig/instructions_pipeline.png}
+    \caption{Concurrent instruction execution in the MIPS pipeline~\cite{website}.}
+    \label{fig:instructions_pipeline}
+\end{figure}
+
+\section{Instruction Set Architecture}
+
+\subsection{Instruction Formats and Encoding}
+The simulator implements all three primary instruction formats, each with a fixed 32-bit encoding scheme as shown in Figure~\ref{fig:instruction_format}. This consistent formatting enables efficient decoding and execution across all instruction types.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{fig/instruction_format.png}
+    \caption{MIPS instruction encoding formats~\cite{lectures}.}
+    \label{fig:instruction_format}
+\end{figure}
+
+\subsection{Instruction Categories and Examples}
+The supported instruction set includes:
+
+\textbf{R-type (Register Operations):} 
+\begin{itemize}
+    \item \texttt{ADD, SUB, AND, OR, SLT}
+    \item \textcolor{blue}{Example: \texttt{add \$t0, \$t1, \$t2} - Register addition}
+\end{itemize}
+
+\textbf{I-type (Immediate/Memory Operations):}
+\begin{itemize}
+    \item \texttt{ADDI, LW, SW, BEQ, BNE}  
+    \item \textcolor{green!70!black}{Example: \texttt{lw \$t0, 4(\$sp)} - Memory load operation}
+\end{itemize}
+
+\textbf{J-type (Jump Operations):}
+\begin{itemize}
+    \item \texttt{J, JAL}
+    \item \textcolor{red!80!black}{Example: \texttt{j main} - Unconditional jump}
+\end{itemize}
+
+\subsection{Register Transfer Level (RTL) Description}
+
+The simulator models instruction execution at the register transfer level, describing the data movements and operations between pipeline stages for each instruction type.
+
+\subsubsection{R-type Instructions RTL Description}
+For R-type instructions such as \texttt{add \$rd, \$rs, \$rt}:
+\begin{align*}
+\text{IF:} & \quad \text{IR} \leftarrow \text{Mem[PC]}, \quad \text{PC} \leftarrow \text{PC} + 4 \\
+\text{ID:} & \quad \text{A} \leftarrow \text{Reg[\$rs]}, \quad \text{B} \leftarrow \text{Reg[\$rt]}, \quad \text{Decode opcode} \\
+\text{EX:} & \quad \text{ALUOutput} \leftarrow \text{A} \oplus \text{B} \quad \text{where } \oplus \text{ is the ALU operation} \\
+\text{MEM:} & \quad \text{No memory operation} \\
+\text{WB:} & \quad \text{Reg[\$rd]} \leftarrow \text{ALUOutput}
+\end{align*}
+
+\subsubsection{I-type Load/Store RTL Description}
+For load instructions such as \texttt{lw \$rt, offset(\$rs)}:
+\begin{align*}
+\text{IF:} & \quad \text{IR} \leftarrow \text{Mem[PC]}, \quad \text{PC} \leftarrow \text{PC} + 4 \\
+\text{ID:} & \quad \text{A} \leftarrow \text{Reg[\$rs]}, \quad \text{Sign-extend immediate} \\
+\text{EX:} & \quad \text{ALUOutput} \leftarrow \text{A} + \text{SignExt(imm)} \\
+\text{MEM:} & \quad \text{LMD} \leftarrow \text{Mem[ALUOutput]} \\
+\text{WB:} & \quad \text{Reg[\$rt]} \leftarrow \text{LMD}
+\end{align*}
+
+For store instructions such as \texttt{sw \$rt, offset(\$rs)}:
+\begin{align*}
+\text{IF:} & \quad \text{IR} \leftarrow \text{Mem[PC]}, \quad \text{PC} \leftarrow \text{PC} + 4 \\
+\text{ID:} & \quad \text{A} \leftarrow \text{Reg[\$rs]}, \quad \text{B} \leftarrow \text{Reg[\$rt]}, \quad \text{Sign-extend immediate} \\
+\text{EX:} & \quad \text{ALUOutput} \leftarrow \text{A} + \text{SignExt(imm)} \\
+\text{MEM:} & \quad \text{Mem[ALUOutput]} \leftarrow \text{B} \\
+\text{WB:} & \quad \text{No register writeback}
+\end{align*}
+
+\subsubsection{Branch Instructions RTL Description}
+For branch instructions such as \texttt{beq \$rs, \$rt, label}:
+\begin{align*}
+\text{IF:} & \quad \text{IR} \leftarrow \text{Mem[PC]}, \quad \text{PC} \leftarrow \text{PC} + 4 \\
+\text{ID:} & \quad \text{A} \leftarrow \text{Reg[\$rs]}, \quad \text{B} \leftarrow \text{Reg[\$rt]}, \quad \text{Target} \leftarrow \text{PC} + (\text{imm} \ll 2) \\
+\text{EX:} & \quad \text{Condition} \leftarrow (\text{A} = \text{B}), \quad \text{If Condition then PC} \leftarrow \text{Target} \\
+\text{MEM:} & \quad \text{Pipeline flush if branch taken} \\
+\text{WB:} & \quad \text{No register writeback}
+\end{align*}
+
+\subsubsection{Jump Instructions RTL Description}
+For jump instructions such as \texttt{j target}:
+\begin{align*}
+\text{IF:} & \quad \text{IR} \leftarrow \text{Mem[PC]}, \quad \text{PC} \leftarrow \text{PC} + 4 \\
+\text{ID:} & \quad \text{Target} \leftarrow (\text{PC}_{31:28} \parallel (\text{address} \ll 2)) \\
+\text{EX:} & \quad \text{PC} \leftarrow \text{Target} \\
+\text{MEM:} & \quad \text{Pipeline flush} \\
+\text{WB:} & \quad \text{No register writeback}
+\end{align*}
+
+\subsubsection{Pipeline Register Transfers}
+The data flow between stages is maintained through pipeline registers:
+\begin{align*}
+\text{IF/ID:} & \quad \text{IR, PC+4} \\
+\text{ID/EX:} & \quad \text{A, B, SignExt(imm), Control signals} \\
+\text{EX/MEM:} & \quad \text{ALUOutput, B, Control signals} \\
+\text{MEM/WB:} & \quad \text{LMD, ALUOutput, Control signals}
+\end{align*}
+
+This RTL description provides the formal specification for instruction execution that guides the simulator implementation, ensuring accurate modeling of the MIPS pipeline behavior.
+
+\subsection{Supported Instruction Set}
+The simulator implements 18 core MIPS instructions covering arithmetic, memory, and control flow operations:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{0.9\textwidth}{|l|l|X|}
+\hline
+\textbf{Type} & \textbf{Instruction} & \textbf{Description} \\
+\hline
+\rowcolor{gray!10}
+\multicolumn{3}{|c|}{\textbf{R-type Instructions (Register Operations)}} \\
+\hline
+ADD & \texttt{add rd, rs, rt} & Integer addition \\
+SUB & \texttt{sub rd, rs, rt} & Integer subtraction \\
+AND & \texttt{and rd, rs, rt} & Bitwise AND \\
+OR & \texttt{or rd, rs, rt} & Bitwise OR \\
+SLT & \texttt{slt rd, rs, rt} & Set less than (signed) \\
+\hline
+\rowcolor{gray!10}
+\multicolumn{3}{|c|}{\textbf{I-type Instructions (Immediate/Memory Operations)}} \\
+\hline
+ADDI & \texttt{addi rt, rs, imm} & Add immediate \\
+LW & \texttt{lw rt, offset(rs)} & Load word from memory \\
+SW & \texttt{sw rt, offset(rs)} & Store word to memory \\
+BEQ & \texttt{beq rs, rt, label} & Branch if equal \\
+BNE & \texttt{bne rs, rt, label} & Branch if not equal \\
+ORI & \texttt{ori rt, rs, imm} & Bitwise OR immediate \\
+ANDI & \texttt{andi rt, rs, imm} & Bitwise AND immediate \\
+SLTI & \texttt{slti rt, rs, imm} & Set less than immediate \\
+\hline
+\rowcolor{gray!10}
+\multicolumn{3}{|c|}{\textbf{J-type Instructions (Jump Operations)}} \\
+\hline
+J & \texttt{j target} & Unconditional jump \\
+JAL & \texttt{jal target} & Jump and link \\
+JR & \texttt{jr rs} & Jump to register \\
+\hline
+\end{tabularx}
+\caption{Complete instruction set supported by the simulator.}
+\label{tab:instruction_set}
+\end{table}
+
+\section{Pipeline Hazard Mechanisms}
+
+\subsection{Hazard Classification and Detection}
+Pipeline hazards represent situations when the next instruction cannot be executed in the following clock cycle. Three types of hazards can be distinguished:
+
+\begin{itemize}
+    \item \textbf{Structural Hazards:} Arise from resource conflicts; when two instructions attempt to use the same hardware component at the same time. An example is shown in Figure~\ref{fig:structural_hazard}, where the Load and Instruction 3 both need to access the memory in the same cycle.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.6\textwidth]{fig/structural_hazard.png}
+        \caption{Simultaneous memory access of two instructions in different stages~\cite{lectures}.}
+        \label{fig:structural_hazard}
+    \end{figure}
+
+    \item \textbf{Data Hazards:} Occur when instructions depend on results from previous instructions still in the pipeline. Figure~\ref{fig:data_hazard} presents a Read-After-Write (RAW) hazard where the \texttt{and} instruction needs \$2 in cycle 3 (during ID stage) or cycle 4 (during EX stage), but the value won't be available until cycle 5.
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.6\textwidth]{fig/data_hazard.png}
+        \caption{RAW Data Hazard~\cite{lectures}.}
+        \label{fig:data_hazard}
+    \end{figure}
+    
+    \item \textbf{Control Hazards:} Result from branch and jump instructions altering the program flow; attempt to make a decision about program control flow before the condition has been evaluated and the new program counter target address computed. An example is detailed below:
+
+    \begin{verbatim}
+    Cycle 1:  beq $t0, $t1, label    # Branch instruction
+    Cycle 2:  add $t2, $t3, $t4      # Instruction after branch
+    Cycle 3:  lw $t5, 0($t6)         # Second instruction after branch  
+    Cycle 4:  label: add $t7, $t8, $t9  # Branch target
+    \end{verbatim}
+    
+\end{itemize}
+
+\subsection{Hazard Resolution Algorithms}
+The simulator implements all three hazards presented above, as well as several resolution strategies to maintain pipeline efficiency:
+
+\textbf{Pipeline Stall Algorithm:}
+\begin{enumerate}
+    \item Identify unresolvable data or structural hazards
+    \item Insert pipeline bubbles by disabling register writes and PC updates
+    \item Maintain pipeline state until hazard resolves
+\end{enumerate}
+
+\textbf{Forwarding Algorithm:}
+\begin{enumerate}
+    \item Detect data dependencies between instructions in EX/MEM/WB and ID stages
+    \item Route results directly from producing stages to consuming stages
+    \item Bypass register file access when newer data is available
+\end{enumerate}
+
+\textbf{Branch Prediction Strategy:}
+\begin{enumerate}
+    \item Assume branch not taken for simple prediction
+    \item Flush pipeline if prediction proves incorrect
+    \item Redirect instruction fetch to correct target address
+    \item \textbf{Penalty:} 2 clock cycles lost when the branch is taken
+\end{enumerate}
+
+\section{Processor Components Architecture}
+
+\subsection{Control Unit Design}
+The control unit generates control signals across all pipeline stages based on decoded information from the instruction opcode and/or function field. Its operation follows this sequence:
+
+\begin{enumerate}
+    \item Analyze opcode and function fields during ID stage
+    \item Generate stage-specific control signals (RegWrite, MemRead, MemWrite, ALUOp, etc.)
+    \item Propagate control signals through pipeline registers
+    \item Deactivate signals for instructions that don't use specific stages
+\end{enumerate}
+
+The data-path with control signals is depicted in Figure~\ref{fig:control_datapath}. Each of the described steps can be observed in blue.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{fig/control_unit.png}
+    \caption{MIPS Pipeline Data-Path with control signals~\cite{website}.}
+    \label{fig:control_datapath}
+\end{figure}
+
+\subsection{ALU Operations and Functionality}
+The Arithmetic Logic Unit performs computations based on control signals and operand inputs. Key operations include:
+\begin{itemize}
+    \item Arithmetic: Addition, subtraction with overflow detection
+    \item Logical: AND, OR, XOR, NOR operations
+    \item Comparison: Set-less-than for signed and unsigned values
+    \item Shift: Logical and arithmetic shift operations
+\end{itemize}
+
+\subsection{Memory Hierarchy and Register Organization}
+The memory subsystem uses separate instruction and data memories following the Harvard architecture principle to avoid structural hazards. This separation allows simultaneous instruction fetch and data memory access in different pipeline stages.
+
+\subsubsection{Register File Organization}
+The MIPS architecture features 32 general-purpose 32-bit registers.
+
+The register file organization supports pipeline operation through:
+\begin{itemize}
+    \item Dual read ports for simultaneous reading of two source operands during ID stage
+    \item Single write port for register updates during WB stage
+    \item The \texttt{\$zero} register is hardwired to value 0 for efficient constant generation
+    \item Register bypass logic to handle RAW data hazards between pipeline stages
+\end{itemize}
+
+\subsubsection{Memory Organization}
+The memory system features:
+\begin{itemize}
+    \item Byte-addressable 32-bit address space
+    \item Word-aligned memory accesses (addresses divisible by 4)
+    \item Selectable endianness
+    \item Separate instruction and data memories to prevent structural hazards
+    \item Memory-mapped I/O regions for input/output operations
+\end{itemize}
+
+\subsection{Simulation Methodology}
+
+The simulator models the MIPS pipeline using a discrete, clock-driven approach. Each clock cycle represents a complete synchronization point where all pipeline stages update their state and data flow concurrently.
+
+\subsubsection{Simulation Approach} 
+
+\begin{itemize}
+    \item \textbf{Clock-driven Execution:} The simulation advances one clock cycle at a time.
+    \item \textbf{Pipeline Synchronization:} All stages (IF, ID, EX, MEM, WB) execute in parallel, maintaining consistent instruction flow.
+    \item \textbf{Event Handling:} During each cycle, instructions progress through stages, hazards are managed, architectural state is updated, and the visualization reflects the new system state.
+\end{itemize}
+
+\subsubsection{Clock Cycle Execution Sequence}
+
+Each clock cycle involves the following steps:
+
+\begin{enumerate}
+    \item Propagate instructions through pipeline stages (IF → ID → EX → MEM → WB)
+    \item Detect and resolve hazards using forwarding or stalling
+    \item Handle control flow changes and flush mispredicted instructions
+    \item Update registers and memory with computed results
+    \item Refresh the visualization and increment the simulation clock
+\end{enumerate}
+
+
+\chapter{Design}\label{ch:design}
+
+This chapter presents the design and architectural structure of the MIPS pipeline simulator. Building on the theoretical concepts described in Chapter~\ref{ch:analysis}, this section outlines how those ideas are implemented in software.
+
+\section{System Architecture Overview}
+
+The simulator follows a modular, layered architecture composed of three main layers:
+
+\begin{itemize}
+    \item \textbf{Simulation Engine Layer} – Implements the core logic of instruction execution and hazard management.
+    \item \textbf{Data Model Layer} – Represents the architectural state of the processor, including registers, memory, and pipeline registers.
+    \item \textbf{Presentation Layer} – Provides visualization and interaction for the user through graphical components.
+\end{itemize}
+
+The layered approach promotes separation of concerns, making the design easy to maintain and extend in the future.
+
+\section{Use Case Diagram}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{fig/use_case_diagram.png}
+    \caption{Use case diagram showing user interactions with the simulator.}
+    \label{fig:use_case}
+\end{figure}
+
+As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program, execute it step-by-step or continuously, inspect the pipeline state, and enable or disable hazard resolution mechanisms. The main interactions include program loading, execution control, state inspection, and simulation reset.
+
+\section{Class Diagram and Component Design}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{fig/class_diagram.png}
+    \caption{Class diagram showing main system components and their relationships.}
+    \label{fig:class_diagram}
+\end{figure}
+
+Figure~\ref{fig:class_diagram} illustrates the system's class structure. The simulator is centered around the \texttt{PipelineController}, which manages clock cycles, pipeline stage coordination, and hazard handling. Each pipeline stage—\texttt{FetchStage}, \texttt{DecodeStage}, \texttt{ExecuteStage}, \texttt{MemoryStage}, and \texttt{WriteBackStage}—is represented by a dedicated class responsible for its specific functionality.
+
+\subsection{Core Components}
+
+\textbf{\texttt{PipelineController}}
+
+Coordinates overall execution, synchronizing pipeline stages each cycle. It interfaces with the hazard detection and forwarding units to ensure correct instruction flow.
+
+\vspace{1ex} 
+
+\textbf{\texttt{HazardDetectionUnit}, \texttt{ForwardingUnit}, and \texttt{StallUnit}}
+
+These units collectively handle instruction dependencies and pipeline control. The \texttt{HazardDetectionUnit} identifies data, control, and structural hazards during each clock cycle. When a hazard cannot be resolved through data forwarding, the \texttt{StallUnit} introduces pipeline stalls to preserve correct execution order. The \texttt{ForwardingUnit} handles read-after-write (RAW) hazards by routing results directly between stages whenever possible.
+
+\vspace{1ex}
+
+\textbf{\texttt{Pipeline Registers}}
+
+Classes such as \texttt{IF\_ID\_Register}, \texttt{ID\_EX\_Register}, \texttt{EX\_MEM\_Register}, and \texttt{MEM\_WB\_Register} hold intermediate data between stages, encapsulating control signals and operand values for the next clock cycle.
+
+\vspace{2ex}
+
+\subsection{Architectural State Components}
+
+\textbf{\texttt{RegisterFile}}
+
+Stores the 32 general-purpose registers. Provides simultaneous read ports and one write port for concurrent access during pipeline execution.
+
+\vspace{1ex}
+
+\textbf{\texttt{Memory Subsystem}}
+
+Implemented as \texttt{InstructionMemory} and \texttt{DataMemory} classes, maintains separation between instruction fetch and data access paths.
+
+\vspace{1ex}
+
+\textbf{\texttt{ProgramCounter}}
+
+Tracks the address of the instruction currently being fetched. Updated each cycle or redirected in case of branch instructions.
+
+\vspace{1ex}
+
+\textbf{\texttt{ControlUnit}}
+
+Generates the control signals required by each instruction type, influencing multiplexers, ALU operations, and memory control lines.
+
+
+\subsection{Pipeline Stages}
+
+Each stage encapsulates its corresponding MIPS pipeline function:
+
+\begin{itemize}
+    \item \textbf{\texttt{FetchStage}:} Retrieves the next instruction from \texttt{InstructionMemory}.
+    \item \textbf{\texttt{DecodeStage}:} Decodes instruction fields and reads operand values from the \texttt{RegisterFile}.
+    \item \textbf{\texttt{ExecuteStage}:} Performs arithmetic or logical operations through the ALU.
+    \item \textbf{\texttt{MemoryStage}:} Accesses or updates data memory for load and store instructions.
+    \item \textbf{\texttt{WriteBackStage}:} Writes computed results back into the register file.
+\end{itemize}
+
+\section{Data Flow and Execution Sequence}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{fig/data_flow.png}
+    \caption{Data flow diagram illustrating information exchange between components.}
+    \label{fig:data_flow}
+\end{figure}
+
+As depicted in Figure~\ref{fig:data_flow}, the simulation proceeds in a sequence of discrete clock cycles managed by the \texttt{PipelineController}. Each cycle involves:
+
+\begin{enumerate}
+    \item Fetching the next instruction.
+    \item Decoding and preparing operands.
+    \item Executing ALU or branch operations.
+    \item Accessing memory (if required).
+    \item Writing results to registers.
+\end{enumerate}
+
+Hazard detection and forwarding operate concurrently during each cycle to maintain correctness.
+
+\section{User Interface Components}
+
+The visualization layer presents the internal state of the simulator in real time. It includes:
+
+\begin{itemize}
+    \item \textbf{\texttt{PipelineVisualizer}:} Displays the content and status of each pipeline stage.
+    \item \textbf{\texttt{RegisterDisplay}:} Shows current register values and highlights recent changes.
+    \item \textbf{\texttt{ControlPanel}:} Provides execution controls for stepping, running, pausing, and resetting the simulation.
+\end{itemize}
+
+These components are updated after every clock cycle, ensuring synchronized feedback between the simulation engine and the user interface.
+
+\section{Component Interaction Summary}
+
+During each clock cycle, the following sequence occurs:
+\begin{itemize}
+    \item The \texttt{PipelineController} triggers all stage modules.
+    \item Pipeline registers propagate intermediate results.
+    \item The \texttt{HazardDetectionUnit} and \texttt{ForwardingUnit} adjust data paths as needed.
+    \item Architectural state components (\texttt{RegisterFile}, \texttt{Memory}, \texttt{ProgramCounter}) are updated.
+    \item Visualization components refresh to display the new state.
+\end{itemize}
+
 
 \printbibliography
 \nocite{*}
