@@ -1,24 +1,8 @@
 package model.memory;
 
 public class DataMemory {
+    private final int[] memory = new int[1024];
 
-    private byte[] data;
-
-    public DataMemory() {}
-
-    public DataMemory(byte[] data) {
-        this.data = data;
-    }
-
-    public int readWord(int address) {
-        return data[address] & 0xff;
-    }
-
-    public void writeWord(int address, int value) {
-        data[address] = (byte) (value & 0xff);
-    }
-
-    public byte[] getData() {
-        return data;
-    }
+    public int loadWord(int address) { return memory[address / 4]; }
+    public void storeWord(int address, int value) { memory[address / 4] = value; }
 }

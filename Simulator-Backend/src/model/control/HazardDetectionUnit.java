@@ -1,4 +1,4 @@
-package engine;
+package model.control;
 
 public class HazardDetectionUnit {
 }

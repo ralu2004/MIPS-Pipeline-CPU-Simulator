@@ -1,5 +1,7 @@
 package model.instruction;
 
+import model.cpu.CPUState;
+
 public abstract class Instruction {
 
     private int opcode;
@@ -10,18 +12,9 @@ public abstract class Instruction {
         this.binary = binary;
     }
 
-    public abstract void execute();
+    public abstract void decodeFields();
+    public abstract void execute(CPUState cpuState);
 
-    public String getType() {
-        return "Instruction";
-    }
-
-    public void decodeFields() {}
-
-    public int getOpcode() {
-        return opcode;
-    }
-    public int getBinary() {
-        return binary;
-    }
+    public int getOpcode() { return opcode; }
+    public int getBinary() { return binary; }
 }

@@ -1,4 +1,4 @@
-package model.stages;
+package model.pipeline.stages;
 
 public class WriteBackStage {
 }
