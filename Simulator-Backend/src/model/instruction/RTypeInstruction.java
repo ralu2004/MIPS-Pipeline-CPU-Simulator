@@ -1,7 +1,10 @@
 package model.instruction;
 
-import model.cpu.CPUState;
-
+/**
+ * R-Type Instruction (Register-type)
+ * Format: opcode(6) | rs(5) | rt(5) | rd(5) | shamt(5) | funct(6)
+ * Execution is handled by ExecuteStage using ALU operations
+ */
 public class RTypeInstruction extends Instruction{
 
     private int rs;
@@ -10,18 +13,8 @@ public class RTypeInstruction extends Instruction{
     private int shamt;
     private int func;
 
-    @Override
-    public void execute(CPUState cpuState) {
-        switch (func) {
-            case 0x20: // add
-                cpuState.registers.set(rd, cpuState.registers.get(rs) + cpuState.registers.get(rt));
-                break;
-            case 0x22: // sub
-                cpuState.registers.set(rd, cpuState.registers.get(rs) - cpuState.registers.get(rt));
-                break;
-            default:
-                throw new UnsupportedOperationException("Unsupported R-type function: " + func);
-        }
+    public RTypeInstruction(int opcode, int binary) {
+        super(opcode, binary);
     }
 
     @Override
