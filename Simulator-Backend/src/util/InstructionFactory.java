@@ -1,4 +1,9 @@
-package model.instruction;
+package util;
+
+import model.instruction.ITypeInstruction;
+import model.instruction.Instruction;
+import model.instruction.JTypeInstruction;
+import model.instruction.RTypeInstruction;
 
 /**
  * Instruction Factory
