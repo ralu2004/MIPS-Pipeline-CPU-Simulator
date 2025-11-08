@@ -27,4 +27,13 @@ public class ITypeInstruction extends Instruction {
     public int getRs() { return rs; }
     public int getRt() { return rt; }
     public int getImmediate() { return immediate; }
+
+    @Override
+    public String toString() {
+        return "ITypeInstruction{" +
+                "rs=" + rs +
+                ", rt=" + rt +
+                ", immediate=" + immediate +
+                '}';
+    }
 }

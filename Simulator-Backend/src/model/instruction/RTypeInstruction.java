@@ -39,4 +39,15 @@ public class RTypeInstruction extends Instruction{
     public int getRd() { return rd; }
     public int getShamt() { return shamt; }
     public int getFunc() { return func; }
+
+    @Override
+    public String toString() {
+        return "RTypeInstruction{" +
+                "rs=" + rs +
+                ", rt=" + rt +
+                ", rd=" + rd +
+                ", shamt=" + shamt +
+                ", func=" + func +
+                '}';
+    }
 }

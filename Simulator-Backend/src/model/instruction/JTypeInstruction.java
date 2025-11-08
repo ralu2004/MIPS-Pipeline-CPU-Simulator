@@ -19,4 +19,11 @@ public class JTypeInstruction extends Instruction {
     }
 
     public int getAddress() { return address; }
+
+    @Override
+    public String toString() {
+        return "JTypeInstruction{" +
+                "address=" + address +
+                '}';
+    }
 }

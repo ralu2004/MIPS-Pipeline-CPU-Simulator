@@ -14,9 +14,9 @@ public class InstructionMemory {
 
     public Instruction fetch(int address) {
         if (address < 0 || address >= instructions.length * 4) {
-            return null; // Out of bounds
+            return null;
         }
-        return instructions[address / 4]; // word-aligned
+        return instructions[address / 4];
     }
 
     public void setInstruction(int address, Instruction instruction) {
