@@ -89,11 +89,7 @@ public class ProgramLoader {
 		if (s.isEmpty()) throw new IllegalArgumentException("Empty hex string");
 		return (int)Long.parseLong(s, 16);
 	}
-
-	/**
-	 * Minimal instruction factory logic inlined here to avoid extra dependencies.
-	 * If a standalone InstructionFactory exists, replace with that.
-	 */
+	
 	private static Instruction parseInstruction(int binaryWord) {
 		int opcode = (binaryWord >>> 26) & 0x3F; // unsigned shift for safety
 		if (opcode == 0x00) {
