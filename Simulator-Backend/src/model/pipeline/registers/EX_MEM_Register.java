@@ -7,28 +7,19 @@ import model.instruction.Instruction;
  * Holds data between Execute and Memory stages
  */
 public class EX_MEM_Register {
-    // ALU results
-    private int aluResult;      // ALU computation result
-    private boolean zeroFlag;   // ALU zero flag (for branch decisions)
-    
-    // Data for memory operations
-    private int writeData;      // Data to write to memory (rt value for stores)
-    
-    // Branch information
-    private int branchTarget;   // Calculated branch target address
-    private boolean branchTaken; // Whether branch condition is met
-    
-    // Destination register (selected by RegDst mux in EX stage)
+
+    private int aluResult;
+    private boolean zeroFlag;
+    private int writeData;
+    private int branchTarget;
+    private boolean branchTaken;
     private int destReg;
-    
-    // Control signals (passed from ID/EX)
     private boolean regWrite;
     private boolean memToReg;
     private boolean branch;
     private boolean memRead;
     private boolean memWrite;
-    
-    // Instruction reference (for debugging/tracking)
+
     private Instruction instruction;
 
     public void setAluResult(int value) { this.aluResult = value; }
@@ -56,7 +47,6 @@ public class EX_MEM_Register {
     public boolean isMemRead() { return memRead; }
     public boolean isMemWrite() { return memWrite; }
     public Instruction getInstruction() { return instruction; }
-    
-    // Legacy method name for compatibility
+
     public int getRtValue() { return writeData; }
 }

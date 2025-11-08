@@ -7,18 +7,16 @@ import model.instruction.Instruction;
  * Holds data between Instruction Decode and Execute stages
  */
 public class ID_EX_Register {
-    // Data from register file
-    private int readData1;      // Value from rs register
-    private int readData2;      // Value from rt register
-    private int signExtendedImm; // Sign-extended immediate value
-    private int pcPlus4;        // PC+4 for branch/jump calculations
-    
-    // Register numbers for hazard detection and forwarding
-    private int rs;             // Source register 1
-    private int rt;             // Source register 2 / destination for I-type
-    private int rd;             // Destination register for R-type
-    
-    // Control signals (from Control Unit)
+
+    private int readData1;
+    private int readData2;
+    private int signExtendedImm;
+    private int pcPlus4;
+
+    private int rs;
+    private int rt;
+    private int rd;
+
     private boolean regWrite;
     private boolean memToReg;
     private boolean branch;
@@ -26,9 +24,8 @@ public class ID_EX_Register {
     private boolean memWrite;
     private boolean regDst;     // 1 = rd, 0 = rt
     private boolean aluSrc;     // 1 = immediate, 0 = readData2
-    private int aluOp;          // ALU operation code
-    
-    // Instruction reference (for debugging/tracking)
+    private int aluOp;
+
     private Instruction instruction;
 
     public void setReadData1(int value) { this.readData1 = value; }
