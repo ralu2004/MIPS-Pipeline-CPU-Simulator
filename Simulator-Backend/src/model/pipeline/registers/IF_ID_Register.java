@@ -15,4 +15,6 @@ public class IF_ID_Register {
     public Instruction getInstruction() { return instruction; }
 
     public int getPC() { return pc; }
+
+
 }

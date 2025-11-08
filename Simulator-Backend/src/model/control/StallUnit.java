@@ -13,9 +13,9 @@ public class StallUnit {
     private final HazardDetectionUnit hazardDetectionUnit = new HazardDetectionUnit();
     
     private boolean stall = false;
-    private boolean pcWrite = true;   // Enable PC update (disable on stall)
-    private boolean ifidWrite = true; // Enable IF/ID write (disable on stall)
-    private boolean idExClear = false; // Clear ID/EX (insert bubble)
+    private boolean pcWrite = true;
+    private boolean ifidWrite = true;
+    private boolean idExClear = false;
     
     /**
      * Detect if a stall is needed
@@ -32,13 +32,11 @@ public class StallUnit {
         HazardDetectionUnit.HazardReport report = hazardDetectionUnit.checkAllHazards(regs);
         
         if (report.hasLoadUseHazard()) {
-            //Stall the pipeline
             stall = true;
             pcWrite = false;      
             ifidWrite = false;    
             idExClear = true;    
         }
-        
         return stall;
     }
     
