@@ -18,9 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Minimal HTTP API using built-in HttpServer.
- * Endpoints:
- *  - POST /api/load?start=0          (body: hex lines separated by \n)
+ *  - POST /api/load?start=0          (hex lines separated by \n)
  *  - POST /api/step?cycles=1         (advances N cycles)
  *  - GET  /api/state                 (returns JSON of CPU and pipeline state)
  *  - POST /api/reset?clearRegs=1&clearMem=1&pc=0

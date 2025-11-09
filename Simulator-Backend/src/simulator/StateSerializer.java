@@ -2,9 +2,6 @@ package simulator;
 
 import model.cpu.CPUState;
 
-/**
- * Very small JSON serializer (manual) for CPU/pipeline state
- */
 public class StateSerializer {
 
 	public static String serialize(CPUState state, PipelineController controller) {
@@ -28,9 +25,8 @@ public class StateSerializer {
 		return sb.toString();
 	}
 
+	// TODO
 	private static String serializePipeline(PipelineController controller) {
-		// For now we don't expose internals directly (PipelineController holds registers internally)
-		// You can enhance this function to include IF/ID, ID/EX, EX/MEM, MEM/WB contents.
 		return "{}";
 	}
 }

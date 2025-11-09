@@ -9,13 +9,6 @@ import model.instruction.RTypeInstruction;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * ProgramLoader
- * - Parses program inputs (ints or hex strings)
- * - Converts them to Instruction objects
- * - Loads them into InstructionMemory at word-aligned addresses
- * - Initializes/clears CPU state when requested
- */
 public class ProgramLoader {
 
 	public static final int INSTRUCTION_MEMORY_WORDS = 1024; 
@@ -89,9 +82,9 @@ public class ProgramLoader {
 		if (s.isEmpty()) throw new IllegalArgumentException("Empty hex string");
 		return (int)Long.parseLong(s, 16);
 	}
-	
+
 	private static Instruction parseInstruction(int binaryWord) {
-		int opcode = (binaryWord >>> 26) & 0x3F; // unsigned shift for safety
+		int opcode = (binaryWord >>> 26) & 0x3F;
 		if (opcode == 0x00) {
 			return new RTypeInstruction(opcode, binaryWord);
 		} else if (opcode == 0x02 || opcode == 0x03) {
@@ -101,7 +94,6 @@ public class ProgramLoader {
 		}
 	}
 
-	// Result DTO
 	public static class ProgramLoadResult {
 		public final int loadedCount;
 		public final int startAddress;
