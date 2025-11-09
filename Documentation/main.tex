@@ -16,6 +16,7 @@
 \definecolor{headerblue}{RGB}{79,129,189}
 \usepackage{tikz}
 \usepackage{pdflscape}
+\usepackage{comment}
 \usetikzlibrary{shapes, arrows, positioning}
 %\usepackage{verbatim}
 %\usepackage{mdframed}
@@ -56,6 +57,23 @@ showstringspaces=false,
 showtabs=false,
 tabsize=2
 }
+
+\lstdefinestyle{javaStyle}{
+  language=Java,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{orange},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=5pt,
+  showstringspaces=false,
+  tabsize=2,
+  breaklines=true,
+  frame=single
+}
+
 \lstset{style=lstcustom}
 \setlength{\parindent}{0pt}
 
@@ -295,6 +313,7 @@ The data flow between stages is maintained through pipeline registers:
 This RTL description provides the formal specification for instruction execution that guides the simulator implementation, ensuring accurate modeling of the MIPS pipeline behavior.
 
 \subsection{Supported Instruction Set}
+\label{subsec:supported-instructions}
 The simulator implements 18 core MIPS instructions covering arithmetic, memory, and control flow operations:
 
 \begin{table}[H]
@@ -491,7 +510,7 @@ The simulator follows a modular, layered architecture composed of three main lay
 
 The layered approach promotes separation of concerns, making the design easy to maintain and extend in the future.
 
-\section{Use Case Diagram}
+\section{User Interactions with the Simulator}
 
 \begin{figure}[H]
     \centering
@@ -502,7 +521,7 @@ The layered approach promotes separation of concerns, making the design easy to 
 
 As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program, execute it step-by-step or continuously, inspect the pipeline state, and enable or disable hazard resolution mechanisms. The main interactions include program loading, execution control, state inspection, and simulation reset.
 
-\section{Class Diagram and Component Design}
+\section{Simulator Components}
 
 \begin{figure}[H]
     \centering
@@ -511,63 +530,62 @@ As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program, exec
     \label{fig:class_diagram}
 \end{figure}
 
-Figure~\ref{fig:class_diagram} illustrates the system's class structure. The simulator is centered around the \texttt{PipelineController}, which manages clock cycles, pipeline stage coordination, and hazard handling. Each pipeline stage—\texttt{FetchStage}, \texttt{DecodeStage}, \texttt{ExecuteStage}, \texttt{MemoryStage}, and \texttt{WriteBackStage}—is represented by a dedicated class responsible for its specific functionality.
+Figure~\ref{fig:class_diagram} illustrates the system's class structure. The simulator is centered around the \textbf{PipelineController}, which manages clock cycles, pipeline stage coordination, and hazard handling. Each pipeline stage—\textbf{FetchStage}, \textbf{DecodeStage}, \textbf{ExecuteStage}, \textbf{MemoryStage}, and \textbf{WriteBackStage}—is represented by a dedicated class responsible for its specific functionality.
 
 \subsection{Core Components}
 
-\textbf{\texttt{PipelineController}}
+\textbf{PipelineController}
 
 Coordinates overall execution, synchronizing pipeline stages each cycle. It interfaces with the hazard detection and forwarding units to ensure correct instruction flow.
 
 \vspace{1ex} 
 
-\textbf{\texttt{HazardDetectionUnit}, \texttt{ForwardingUnit}, and \texttt{StallUnit}}
+\textbf{HazardDetectionUnit}, \textbf{ForwardingUnit}, and \textbf{StallUnit}
 
 These units collectively handle instruction dependencies and pipeline control. The \texttt{HazardDetectionUnit} identifies data, control, and structural hazards during each clock cycle. When a hazard cannot be resolved through data forwarding, the \texttt{StallUnit} introduces pipeline stalls to preserve correct execution order. The \texttt{ForwardingUnit} handles read-after-write (RAW) hazards by routing results directly between stages whenever possible.
 
 \vspace{1ex}
 
-\textbf{\texttt{Pipeline Registers}}
+\textbf{Pipeline Registers}
 
-Classes such as \texttt{IF\_ID\_Register}, \texttt{ID\_EX\_Register}, \texttt{EX\_MEM\_Register}, and \texttt{MEM\_WB\_Register} hold intermediate data between stages, encapsulating control signals and operand values for the next clock cycle.
+Classes such as \textbf{IF\_ID\_Register}, \textbf{ID\_EX\_Register}, \textbf{EX\_MEM\_Register}, and \textbf{MEM\_WB\_Register} hold intermediate data between stages, encapsulating control signals and operand values for the next clock cycle.
 
 \vspace{2ex}
 
 \subsection{Architectural State Components}
 
-\textbf{\texttt{RegisterFile}}
+\textbf{\textbf{RegisterFile}}
 
 Stores the 32 general-purpose registers. Provides simultaneous read ports and one write port for concurrent access during pipeline execution.
 
 \vspace{1ex}
 
-\textbf{\texttt{Memory Subsystem}}
+\textbf{\textbf{Memory Subsystem}}
 
-Implemented as \texttt{InstructionMemory} and \texttt{DataMemory} classes, maintains separation between instruction fetch and data access paths.
+Implemented as \textbf{InstructionMemory} and \textbf{DataMemory} classes, maintains separation between instruction fetch and data access paths.
 
 \vspace{1ex}
 
-\textbf{\texttt{ProgramCounter}}
+\textbf{ProgramCounter}
 
 Tracks the address of the instruction currently being fetched. Updated each cycle or redirected in case of branch instructions.
 
 \vspace{1ex}
 
-\textbf{\texttt{ControlUnit}}
+\textbf{ControlUnit}
 
 Generates the control signals required by each instruction type, influencing multiplexers, ALU operations, and memory control lines.
-
 
 \subsection{Pipeline Stages}
 
 Each stage encapsulates its corresponding MIPS pipeline function:
 
 \begin{itemize}
-    \item \textbf{\texttt{FetchStage}:} Retrieves the next instruction from \texttt{InstructionMemory}.
-    \item \textbf{\texttt{DecodeStage}:} Decodes instruction fields and reads operand values from the \texttt{RegisterFile}.
-    \item \textbf{\texttt{ExecuteStage}:} Performs arithmetic or logical operations through the ALU.
-    \item \textbf{\texttt{MemoryStage}:} Accesses or updates data memory for load and store instructions.
-    \item \textbf{\texttt{WriteBackStage}:} Writes computed results back into the register file.
+    \item \textbf{FetchStage}: Retrieves the next instruction from \textbf{InstructionMemory}.
+    \item \textbf{DecodeStage}: Decodes instruction fields and reads operand values from the \textbf{RegisterFile}.
+    \item \textbf{ExecuteStage}: Performs arithmetic or logical operations through the ALU.
+    \item \textbf{MemoryStage}: Accesses or updates data memory for load and store instructions.
+    \item \textbf{WriteBackStage}: Writes computed results back into the register file.
 \end{itemize}
 
 \section{Data Flow and Execution Sequence}
@@ -596,9 +614,9 @@ Hazard detection and forwarding operate concurrently during each cycle to mainta
 The visualization layer presents the internal state of the simulator in real time. It includes:
 
 \begin{itemize}
-    \item \textbf{\texttt{PipelineVisualizer}:} Displays the content and status of each pipeline stage.
-    \item \textbf{\texttt{RegisterDisplay}:} Shows current register values and highlights recent changes.
-    \item \textbf{\texttt{ControlPanel}:} Provides execution controls for stepping, running, pausing, and resetting the simulation.
+    \item \textbf{PipelineVisualizer}: Displays the content and status of each pipeline stage.
+    \item \textbf{RegisterDisplay}: Shows current register values and highlights recent changes.
+    \item \textbf{ControlPanel}: Provides execution controls for stepping, running, pausing, and resetting the simulation.
 \end{itemize}
 
 These components are updated after every clock cycle, ensuring synchronized feedback between the simulation engine and the user interface.
@@ -607,13 +625,531 @@ These components are updated after every clock cycle, ensuring synchronized feed
 
 During each clock cycle, the following sequence occurs:
 \begin{itemize}
-    \item The \texttt{PipelineController} triggers all stage modules.
+    \item The \textbf{PipelineController} triggers all stage modules.
     \item Pipeline registers propagate intermediate results.
-    \item The \texttt{HazardDetectionUnit} and \texttt{ForwardingUnit} adjust data paths as needed.
-    \item Architectural state components (\texttt{RegisterFile}, \texttt{Memory}, \texttt{ProgramCounter}) are updated.
+    \item The \textbf{HazardDetectionUnit} and \textbf{ForwardingUnit} adjust data paths as needed.
+    \item Architectural state components (\textbf{RegisterFile}, \textbf{Memory}, \textbf{ProgramCounter}) are updated.
     \item Visualization components refresh to display the new state.
 \end{itemize}
 
+
+\chapter{Implementation}\label{ch:implementation}
+
+This chapter presents the implementation of the simulator, focusing on the Java backend and the web API for frontend communication. The implementation follows the architectural design from Chapter~\ref{ch:design} to build a functioning simulation engine with an intuitive user interface.
+
+\section{Backend Implementation}
+
+\subsection{Overall Architecture}
+
+The backend implementation follows a modular, object-oriented architecture that closely mirrors the MIPS pipeline structure. The system is organized into several key packages:
+
+\begin{itemize}
+    \item \textbf{model.instruction:} Contains classes representing MIPS instructions (R-type, I-type, J-type) and their decoding logic.
+    \item \textbf{model.cpu:} Implements CPU state components, including the register file, program counter, and memory subsystems.
+    \item \textbf{model.control:} Houses the control unit, hazard detection unit, forwarding unit, and stall unit.
+    \item \textbf{model.pipeline.stages:} Contains the five pipeline stage implementations (Fetch, Decode, Execute, Memory, WriteBack).
+    \item \textbf{model.pipeline.registers:} Implements pipeline registers that buffer data between stages.
+    \item \textbf{simulator:} Provides the main simulation engine, clock, and API server for frontend communication.
+\end{itemize}
+
+\subsection{Instruction Implementation}
+
+Each instruction is represented as an object-oriented model, following the structure and behavior of its corresponding instruction format (R, I, or J-type). All instruction types extend a common abstract base class, \textbf{Instruction}, which provides the binary representation and the opcode, while subclasses handle specific field decoding.
+
+\begin{lstlisting}[style=javaStyle]
+public abstract class Instruction {
+    private final int opcode;
+    private final int binary;
+
+    protected Instruction(int opcode, int binary) {
+        this.opcode = opcode;
+        this.binary = binary;
+    }
+
+    public int getOpcode() { return opcode; }
+    public int getBinary() { return binary; }
+
+    public abstract void decodeFields();
+}
+\end{lstlisting}
+
+\subsubsection*{R-Type Instruction}
+
+The \textbf{RTypeInstruction} class extracts its fields (two source registers, destination register, shift amount and function code) using bit shifting and masking:
+
+\begin{lstlisting}[style=javaStyle]
+@Override
+public void decodeFields() {
+    int binary = getBinary();
+    rs = (binary >> 21) & 0x1F;
+    rt = (binary >> 16) & 0x1F;
+    rd = (binary >> 11) & 0x1F;
+    shamt = (binary >> 6) & 0x1F;
+    func = binary & 0x3F;
+}
+\end{lstlisting}
+
+\subsubsection*{I-Type Instruction}
+
+The \textbf{ITypeInstruction} class decodes the 16-bit immediate field, ensuring sign-extension where necessary:
+
+\begin{lstlisting}[style=javaStyle]
+@Override
+public void decodeFields() {
+    int binary = getBinary();
+    rs = (binary >> 21) & 0x1F;
+    rt = (binary >> 16) & 0x1F;
+    immediate = binary & 0xFFFF;
+    if ((immediate & 0x8000) != 0) immediate |= 0xFFFF0000; // sign-extend
+}
+\end{lstlisting}
+
+\subsubsection*{J-Type Instruction}
+
+The \texttt{JTypeInstruction} class simply extracts the target address as:
+
+\begin{lstlisting}[style=javaStyle]
+@Override
+public void decodeFields() {
+    address = getBinary() & 0x03FFFFFF;
+}
+\end{lstlisting}
+
+\subsection{Memory Subsystem}
+
+\subsubsection*{Instruction Memory}
+The \textbf{InstructionMemory} class stores and provides access to instruction objects in a fixed-size, word-aligned memory array (4 KB = 1024 words). The class provides methods for accessing the contents:
+\begin{itemize}
+    \item Call \textbf{setInstruction(int, Instruction)} to store an instruction at a given address.
+    \item Call \textbf{fetch(int)} to retrieve the instruction from a given address.
+\end{itemize}
+If an address is outside the valid range (0--4092), \textbf{fetch()} returns \texttt{null} and \textbf{setInstruction()} does nothing.
+
+\subsubsection*{Data Memory}
+The \textbf{DataMemory} class provides word-aligned load and store operations for reading and writing 32-bit values through \textbf{loadWord(int)} and \textbf{storeWord(int, int)} methods. Out-of-range addresses are safely ignored:
+\begin{itemize}
+    \item \texttt{loadWord(int)} returns 0 for invalid addresses.
+    \item \texttt{storeWord(int, int)} does nothing for invalid addresses.
+\end{itemize}
+
+\subsection{CPU State Components}
+
+\subsubsection*{Register File}
+
+The \textbf{RegisterFile} class models the 32 general-purpose registers in the MIPS CPU through an Integer array. Register 0 (\$zero) is immutable and always holds the value 0. Other registers can be read and written using \textbf{get()} and \textbf{set()} methods.
+
+\subsubsection*{Program Counter}
+
+The \textbf{ProgramCounter} class models the program counter (PC) of the processor, tracking the address of the current instruction being executed, and providing additional methods to update it.
+\begin{itemize}
+    \item The program counter (\textbf{pc}) is stored as a 32-bit integer.
+    \item The PC can be read using the \textbf{get()} method.
+    \item The PC can be set directly using the \textbf{set(int value)} method.
+    \item The PC can be advanced to the next instruction using \textbf{increment()}, which increases it by 4 (word-aligned).
+    \item An arbitrary offset can be added to the PC using \textbf{addOffset(int offset)}.
+\end{itemize}
+
+\subsubsection*{CPU State}
+
+The \textbf{CPUState} class acts as a central container for the CPU's state, allowing pipeline stages or simulator code to access and modify registers, memory, and the PC. The instruction memory is provided via the constructor, while the other components are initialized internally.
+\begin{lstlisting}[style=javaStyle]
+public class CPUState {
+    public RegisterFile registerFile = new RegisterFile();
+    public InstructionMemory instructionMemory;
+    public DataMemory dataMemory = new DataMemory();
+    public ProgramCounter pc = new ProgramCounter();
+    
+    public CPUState(InstructionMemory instrMem) {
+        this.instructionMemory = instrMem;
+    }
+}
+\end{lstlisting}
+
+\subsection{Control Handling}
+
+\subsubsection*{Control Unit}
+
+The \textbf{ControlUnit} class implements the control logic designed in Section~\ref{ch:design}. It generates control signals based on the instruction opcode to coordinate data flow and ALU operations for the full instruction set.
+
+\paragraph{Control Signals}
+\begin{itemize}
+    \item \texttt{regWrite} --- writes to the register file
+    \item \texttt{memToReg} --- selects memory data vs ALU result
+    \item \texttt{branch} --- branch instruction
+    \item \texttt{memRead} --- load instruction
+    \item \texttt{memWrite} --- store instruction
+    \item \texttt{regDst} --- selects destination register (rd vs rt)
+    \item \texttt{aluSrc} --- selects ALU operand (immediate vs register)
+    \item \texttt{aluOp} --- ALU operation code
+    \item \texttt{jump} --- jump instruction
+\end{itemize}
+
+\subsubsection*{Hazard Detection Unit}
+
+The \textbf{HazardDetectionUnit} implements the hazard detection mechanism described in the design. It monitors the \textbf{PipelineRegisters} to detect data, control, and structural hazards through dedicated methods: \textbf{checkDataHazards(regs)}, \textbf{checkControlHazards(regs)}, \textbf{checkStructuralHazards(regs)}. 
+
+It reports detected hazards through a \textbf{HazardReport} object, which lists all detected conditions and indicates whether stalling or flushing is required. Supporting units such as \textbf{ForwardingUnit} and \textbf{StallUnit} use this information to apply the appropriate solution.
+
+\subsubsection*{Forwarding Unit}
+
+The \textbf{ForwardingUnit} resolves data hazards by forwarding results from later pipeline stages to the ALU inputs in the \textbf{EX} stage. It compares the source registers (\texttt{Rs}, \texttt{Rt}) of the instruction in the \textbf{ID/EX} pipeline register with the destination registers of the instructions in the \textbf{EX/MEM} and \textbf{MEM/WB} pipeline registers. 
+
+If a match is detected and the corresponding instruction writes to a register (\texttt{RegWrite = 1}) other than \texttt{\$zero}, the unit sets the forwarding control signals as follows:
+
+\begin{itemize}
+    \item \texttt{10} --- Forward from \textbf{EX/MEM} stage
+    \item \texttt{01} --- Forward from \textbf{MEM/WB} stage
+    \item \texttt{00} --- No forwarding
+\end{itemize}
+
+The forwarding signals are encapsulated in the \textbf{ForwardingResult} structure:
+\begin{lstlisting}[style=javaStyle]
+public static class ForwardingResult {
+    public final int forwardA;
+    public final int forwardB;
+
+    public ForwardingResult(int forwardA, int forwardB) {
+        this.forwardA = forwardA;
+        this.forwardB = forwardB;
+    }
+}
+\end{lstlisting}
+
+\subsubsection*{Stall Unit}
+
+The \textbf{StallUnit} receives hazard detection signals from the \textbf{HazardDetectionUnit} and issues stall control signals when a \textit{load-use hazard} is detected.
+
+If a stall is required, the unit:
+\begin{itemize}
+    \item Prevents updates to the \textbf{PC} and \textbf{IF/ID} pipeline register
+    \item Clears the control signals in the \textbf{ID/EX} pipeline register to insert a \texttt{bubble} (a no-operation)
+\end{itemize}
+
+The control signals are encapsulated in the \textbf{StallControl} structure:
+\begin{lstlisting}[style=javaStyle]
+public static class StallControl {
+    public final boolean stall;     // true if stalling
+    public final boolean pcWrite;   // enable PC update
+    public final boolean ifidWrite; // enable IF/ID update
+    public final boolean idExClear; // flush ID/EX (insert bubble)
+}
+\end{lstlisting}
+
+\subsection{Pipeline Representation}
+
+\subsubsection*{Pipeline Stages}
+
+The MIPS CPU pipeline is implemented through five concrete classes, each derived from the \textbf{PipelineStage} interface:
+\begin{lstlisting}[style=javaStyle]
+public interface PipelineStage {
+    void process(CPUState state, PipelineRegisters regs);
+}
+\end{lstlisting}
+
+Each stage implements the functionality outlined in Section~\ref{ch:design}:
+
+\begin{itemize}
+    \item \textbf{Fetch (IF)} --- Retrieves the next instruction from instruction memory using the current \textbf{PC}, computes \texttt{PC+4}, and stores both the instruction and the incremented PC value into the \textbf{IF/ID} pipeline register.
+    
+    \item \textbf{Decode (ID)} --- Decodes the fetched instruction, reads operand values from the register file, and generates control signals via the \textbf{ControlUnit}. For jump or branch instructions, it computes the potential target address.
+    
+    \item \textbf{Execute (EX)} --- Performs arithmetic and logical operations using the ALU, computes branch target addresses, determines the destination register, evaluates branch conditions, and applies data forwarding to resolve read-after-write (RAW) hazards.
+    
+    \item \textbf{Memory Access (MEM)} --- Performs data memory operations (\texttt{lw}, \texttt{sw}) and finalizes branch resolution. If a branch is taken, it updates the PC and triggers pipeline flushes.
+    
+    \item \textbf{Write Back (WB)} --- Writes the result of an ALU operation or a value loaded from memory back into the register file.
+\end{itemize}
+
+\subsubsection*{Pipeline Registers}
+
+The pipeline register classes implement the buffering mechanism between pipeline stages:
+
+\begin{itemize}
+    \item \textbf{PipelineRegisters}: A container class that holds all stage-specific registers.
+    \begin{lstlisting}[style=javaStyle]
+    public class PipelineRegisters {
+        public IF_ID_Register IF_ID = new IF_ID_Register();
+        public ID_EX_Register ID_EX = new ID_EX_Register();
+        public EX_MEM_Register EX_MEM = new EX_MEM_Register();
+        public MEM_WB_Register MEM_WB = new MEM_WB_Register();
+    }
+    \end{lstlisting}
+
+    \item \textbf{IF\_ID\_Register}: Stores the fetched instruction and PC for decode stage.
+
+    \text{Fields: } \texttt{instruction, pc}
+
+    \item \textbf{ID\_EX\_Register}: Holds data read from register file, sign-extended immediate values, and control signals.
+
+    \text{Fields: } \texttt{readData1, readData2, signExtendedImm, pcPlus4, rs, rt, rd, regWrite, memToReg, branch, memRead, memWrite, regDst, aluSrc, aluOp, instruction}
+
+    \item \textbf{EX\_MEM\_Register}: Contains ALU results, memory write data, branch information, and control signals.
+
+    \text{Fields: } \texttt{aluResult, zeroFlag, writeData, branchTarget, branchTaken, destReg, regWrite, memToReg, branch, memRead, memWrite, instruction}
+
+    \item \textbf{MEM\_WB\_Register}: Holds data for write-back to register file.
+
+    \text{Fields: } \texttt{aluResult, memData, destReg, regWrite, memToReg, instruction}
+\end{itemize}
+
+The method \textbf{getWriteData()} selects between ALU result and memory data based on the \texttt{memToReg} signal.
+
+\subsection{The Simulation Engine}
+
+\subsubsection*{Pipeline Controller}
+
+The \textbf{PipelineController} implements the central coordination logic for the 5-stage MIPS pipeline, integrating CPU state and pipeline registers to simulate concurrent instruction execution.
+
+\begin{lstlisting}[style=javaStyle]
+public class PipelineController {
+    private final CPUState cpuState;
+    private final PipelineRegisters pipelineRegisters = new PipelineRegisters();
+    private final StallUnit stallUnit = new StallUnit();
+    
+    private final FetchStage fetch = new FetchStage();
+    private final DecodeStage decode = new DecodeStage();
+    private final ExecuteStage execute = new ExecuteStage();
+    private final MemoryStage memory = new MemoryStage();
+    private final WriteBackStage writeBack = new WriteBackStage();
+    
+    public void runCycle() {
+        // processes each stage
+    }
+}
+\end{lstlisting}
+
+\paragraph{Pipeline Operation:}
+The controller processes stages in reverse order (WB $\rightarrow$ MEM $\rightarrow$ EX $\rightarrow$ ID $\rightarrow$ IF) to ensure write-back occurs before subsequent reads. Each cycle, it checks for hazards, applies stalls if needed, and updates pipeline registers.
+
+\paragraph{Hazard Handling:}
+\begin{itemize}
+    \item \textbf{Load-Use Hazards:} Detected by the \textbf{StallUnit}, which stalls the pipeline by freezing the \textbf{PC} and \textbf{IF/ID} register updates and clearing control signals in \textbf{ID/EX} to insert a bubble.
+    \item \textbf{Control Hazards:} Branch instructions follow a \textit{predict-not-taken} policy. If a branch is taken, the controller flushes \textbf{IF/ID} and \textbf{ID/EX} registers, introducing a two-cycle penalty.
+\end{itemize}
+
+\subsubsection*{Clock}
+
+The \textbf{Clock} class simulates the global clock of the MIPS pipeline, advancing the pipeline cycle by cycle through the \textbf{PipelineController}.
+
+\begin{lstlisting}[style=javaStyle]
+public class Clock {
+    private int cycle = 0;
+    private final PipelineController pipelineController;
+
+    public Clock(PipelineController pipelineController) {
+        this.pipelineController = pipelineController;
+    }
+
+    public void tick() {
+        pipelineController.cycle();
+        cycle++;
+    }
+
+    public int getCycle() { return cycle; }
+
+    public void run(int n) {
+        for (int i = 0; i < n; i++) tick();
+    }
+}
+\end{lstlisting}
+
+The \textbf{tick()} method advances the simulation by one clock cycle, while \textbf{run(int n)} executes multiple cycles in sequence, supporting both step-by-step and continuous execution modes.
+
+\subsection{Program Loading and Instruction Parsing}
+
+\subsubsection*{Instruction Factory}
+
+The \textbf{InstructionFactory} utility class provides centralized parsing of 32-bit binary instruction words into corresponding instruction objects using a factory pattern.
+
+\begin{lstlisting}[style=javaStyle]
+public class InstructionFactory {
+    public static Instruction parseInstruction(int binaryWord) {
+        int opcode = (binaryWord >> 26) & 0x3F;
+        
+        if (opcode == 0x00) {
+            return new RTypeInstruction(opcode, binaryWord);
+        } else if (opcode == 0x02 || opcode == 0x03) {
+            return new JTypeInstruction(opcode, binaryWord);
+        } else {
+            return new ITypeInstruction(opcode, binaryWord);
+        }
+    }
+}
+\end{lstlisting}
+
+The factory examines the 6 most significant bits (opcode) to determine instruction format:
+\begin{itemize}
+    \item Opcode \texttt{0x00} indicates R-type instruction
+    \item Opcodes \texttt{0x02} or \texttt{0x03} indicate J-type instructions
+    \item All other opcodes indicate I-type instructions
+\end{itemize}
+
+\subsubsection*{Program Loader}
+
+The \textbf{ProgramLoader} class handles initialization and loading of MIPS programs into instruction memory, supporting multiple input formats:
+
+\begin{itemize}
+    \item \textbf{Integer Array:} Direct 32-bit integer values representing binary instruction words
+    \item \textbf{Hexadecimal Strings:} Text-based hex representation (with or without \texttt{0x} prefix)
+\end{itemize}
+
+Key features include:
+\begin{itemize}
+    \item \textbf{Address Validation:} Ensures instruction addresses are word-aligned and within memory bounds
+    \item \textbf{Bounds Checking:} Prevents loading instructions beyond memory capacity
+    \item \textbf{Warning System:} Collects warnings for out-of-bounds instructions without failing the load operation
+    \item \textbf{State Management:} Provides methods to reset CPU state
+\end{itemize}
+
+The \textbf{loadFromHexStrings()} method processes hex input:
+\begin{lstlisting}[style=javaStyle]
+public static ProgramLoadResult loadFromHexStrings(
+    CPUState state, String[] hexLines, int startAddress) {
+    validateStartAddress(startAddress);
+    
+    int[] words = new int[hexLines.length];
+    for (int i = 0; i < hexLines.length; i++) {
+        words[i] = parseHexToInt(hexLines[i]);
+    }
+    
+    return loadFromIntArray(state, words, startAddress);
+}
+\end{lstlisting}
+
+The \textbf{ProgramLoadResult} class encapsulates load operation outcomes:
+\begin{itemize}
+    \item Number of successfully loaded instructions
+    \item Start and end addresses of the loaded program
+    \item List of warnings generated during loading
+\end{itemize}
+
+\begin{comment}
+\subsection{API Server and Frontend Integration}
+
+To enable web-based interaction with the simulator, a lightweight HTTP API server was implemented using Java's built-in \texttt{HttpServer}. This API provides a RESTful interface for controlling the simulation and querying CPU state.
+
+\subsubsection*{API Architecture}
+
+The \textbf{ApiServer} class manages HTTP request handling and coordinates between the simulation engine and external clients. It maintains references to the \texttt{CPUState}, \texttt{PipelineController}, and \texttt{Clock} instances, ensuring a single source of truth for the simulation state.
+
+\begin{lstlisting}[style=javaStyle]
+public class ApiServer {
+    private final HttpServer server;
+    private final CPUState cpuState;
+    private final PipelineController controller;
+    private final Clock clock;
+
+    public ApiServer(int port) throws IOException {
+        this.cpuState = new CPUState(new InstructionMemory());
+        this.controller = new PipelineController(cpuState);
+        this.clock = new Clock(controller);
+        
+        this.server = HttpServer.create(new InetSocketAddress(port), 0);
+        // Register API endpoints
+        server.createContext("/api/load", new LoadHandler());
+        server.createContext("/api/step", new StepHandler());
+        server.createContext("/api/state", new StateHandler());
+        server.createContext("/api/reset", new ResetHandler());
+        server.createContext("/api/health", new HealthHandler());
+    }
+}
+\end{lstlisting}
+
+\subsubsection*{API Endpoints}
+
+The API exposes five main endpoints:
+
+\begin{enumerate}
+    \item \textbf{POST /api/load} --- Loads a program into instruction memory
+    \begin{itemize}
+        \item Query parameter: \texttt{start} (default: 0) --- Starting address for program loading
+        \item Request body: Newline-separated hexadecimal instruction strings
+        \item Response: JSON containing loaded count, start address, and end address
+    \end{itemize}
+
+    \item \textbf{POST /api/step} --- Advances simulation by specified number of cycles
+    \begin{itemize}
+        \item Query parameter: \texttt{cycles} (default: 1) --- Number of clock cycles to execute
+        \item Response: JSON confirming number of cycles executed
+    \end{itemize}
+
+    \item \textbf{GET /api/state} --- Retrieves current CPU and pipeline state
+    \begin{itemize}
+        \item Response: JSON representation of registers, program counter, and pipeline registers
+    \end{itemize}
+
+    \item \textbf{POST /api/reset} --- Resets the simulator to initial state
+    \begin{itemize}
+        \item Query parameters:
+        \begin{itemize}
+            \item \texttt{clearRegs} --- Clear all registers (boolean)
+            \item \texttt{clearMem} --- Clear data memory (boolean)
+            \item \texttt{pc} --- Reset program counter to specified address (default: 0)
+        \end{itemize}
+        \item Response: JSON confirmation of reset operation
+    \end{itemize}
+
+    \item \textbf{GET /api/health} --- Health check endpoint for monitoring
+    \begin{itemize}
+        \item Response: Simple \texttt{"ok"} string
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection*{Cross-Origin Resource Sharing (CORS)}
+
+The API server implements CORS headers to allow web-based frontends running on different origins to communicate with the simulator. All endpoints include the following headers:
+
+\begin{itemize}
+    \item \texttt{Access-Control-Allow-Origin: *}
+    \item \texttt{Access-Control-Allow-Methods: GET, POST, OPTIONS}
+    \item \texttt{Access-Control-Allow-Headers: Content-Type}
+\end{itemize}
+
+This enables frontend applications hosted separately from the backend to make API requests without browser security restrictions.
+
+\subsubsection*{State Serialization}
+
+The \textbf{StateSerializer} class converts the internal CPU and pipeline state into JSON format for transmission to the frontend. This serialization process:
+
+\begin{itemize}
+    \item Extracts program counter value
+    \item Serializes all 32 registers into a JSON array
+    \item Serializes pipeline register contents (IF/ID, ID/EX, EX/MEM, MEM/WB)
+    \item Formats the data as a structured JSON object
+\end{itemize}
+
+\begin{lstlisting}[style=javaStyle]
+public static String serialize(CPUState state, PipelineController controller) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("{");
+    sb.append("\"pc\":").append(state.pc.get()).append(',');
+    sb.append("\"registers\":").append(serializeRegisters(state)).append(',');
+    sb.append("\"pipeline\":").append(serializePipeline(controller));
+    sb.append("}");
+    return sb.toString();
+}
+\end{lstlisting}
+
+The serialized state enables the frontend to:
+\begin{itemize}
+    \item Display current register values
+    \item Visualize instructions in each pipeline stage
+    \item Track program execution progress
+    \item Highlight data dependencies and hazards
+\end{itemize}
+
+\subsubsection*{Error Handling}
+
+The API implements robust error handling:
+\begin{itemize}
+    \item Invalid HTTP methods return \texttt{405 Method Not Allowed}
+    \item Malformed program data returns \texttt{400 Bad Request} with error details
+    \item Invalid addresses or parameters are validated before processing
+    \item Exceptions are caught and returned as JSON error responses
+\end{itemize}
+
+This design ensures that the frontend receives meaningful error messages and can gracefully handle exceptional conditions during simulation.
+\end{comment}
 
 \printbibliography
 \nocite{*}
