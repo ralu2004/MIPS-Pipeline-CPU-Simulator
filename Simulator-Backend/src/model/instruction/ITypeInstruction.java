@@ -1,9 +1,7 @@
 package model.instruction;
 
 /**
- * I-Type Instruction (Immediate-type)
  * Format: opcode(6) | rs(5) | rt(5) | immediate(16)
- * Execution is handled by ExecuteStage and MemoryStage based on instruction type
  */
 public class ITypeInstruction extends Instruction {
 

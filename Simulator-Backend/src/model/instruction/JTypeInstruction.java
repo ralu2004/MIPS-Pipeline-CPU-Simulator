@@ -1,9 +1,7 @@
 package model.instruction;
 
 /**
- * J-Type Instruction (Jump-type)
  * Format: opcode(6) | address(26)
- * Execution is handled by DecodeStage (jumps update PC in ID stage)
  */
 public class JTypeInstruction extends Instruction {
     private int address;

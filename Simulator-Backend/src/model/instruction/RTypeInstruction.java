@@ -1,9 +1,7 @@
 package model.instruction;
 
 /**
- * R-Type Instruction (Register-type)
  * Format: opcode(6) | rs(5) | rt(5) | rd(5) | shamt(5) | funct(6)
- * Execution is handled by ExecuteStage using ALU operations
  */
 public class RTypeInstruction extends Instruction{
 
