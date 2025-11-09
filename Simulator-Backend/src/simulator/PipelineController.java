@@ -2,14 +2,10 @@ package simulator;
 
 import model.control.StallUnit;
 import model.cpu.CPUState;
+import model.pipeline.registers.MEM_WB_Register;
 import model.pipeline.registers.PipelineRegisters;
 import model.pipeline.stages.*;
 
-/**
- * Pipeline Controller
- * Orchestrates the MIPS 5-stage pipeline execution
- * Handles stalls and pipeline flushing for hazards
- */
 public class PipelineController {
 
     private final CPUState cpuState;
@@ -25,21 +21,20 @@ public class PipelineController {
     public PipelineController(CPUState state) {
         this.cpuState = state;
     }
-    
-    /**
-     * Get pipeline registers for testing/inspection
-     */
-    public PipelineRegisters getPipelineRegisters() {
-        return pipelineRegisters;
-    }
 
     public void runCycle() {
         stallUnit.detectStall(pipelineRegisters);
         StallUnit.StallControl stallControl = stallUnit.getStallControl();
 
+        MEM_WB_Register savedMEM_WB = saveMEM_WB(pipelineRegisters.MEM_WB);
+
         writeBack.process(cpuState, pipelineRegisters);
         memory.process(cpuState, pipelineRegisters);
+
+        MEM_WB_Register newMEM_WB = pipelineRegisters.MEM_WB;
+        pipelineRegisters.MEM_WB = savedMEM_WB;
         execute.process(cpuState, pipelineRegisters);
+        pipelineRegisters.MEM_WB = newMEM_WB;
 
         handleControlHazards();
 
@@ -49,31 +44,36 @@ public class PipelineController {
             decode.process(cpuState, pipelineRegisters);
         }
 
-        if (stallControl.pcWrite && stallControl.ifidWrite) {
-            fetch.process(cpuState, pipelineRegisters);
-        } else if (stallControl.pcWrite) {
+        if (stallControl.pcWrite) {
             fetch.process(cpuState, pipelineRegisters);
         }
     }
-    
-    /**
-     * Handle control hazards by flushing pipeline registers
-     * 
-     * Branch Prediction Strategy: "Predict Not Taken"
-     * - When branch is taken: flush IF_ID and ID_EX (2 instructions)
-     * - This results in 2-cycle penalty for taken branches
-     * - No penalty for branches that are not taken
-     */
+
+    private MEM_WB_Register saveMEM_WB(MEM_WB_Register original) {
+        MEM_WB_Register copy = new MEM_WB_Register();
+        copy.setAluResult(original.getAluResult());
+        copy.setMemData(original.getMemData());
+        copy.setDestReg(original.getDestReg());
+        copy.setRegWrite(original.isRegWrite());
+        copy.setMemToReg(original.isMemToReg());
+        copy.setInstruction(original.getInstruction());
+
+        System.out.println("SAVED MEM_WB: aluResult=" + copy.getAluResult() +
+                ", memData=" + copy.getMemData() +
+                ", destReg=" + copy.getDestReg() +
+                ", memToReg=" + copy.isMemToReg() +
+                ", writeData=" + copy.getWriteData());
+
+        return copy;
+    }
+
     private void handleControlHazards() {
         if (pipelineRegisters.EX_MEM.isBranch() && pipelineRegisters.EX_MEM.isBranchTaken()) {
             pipelineRegisters.IF_ID.set(null, 0);
             clearID_EX();
         }
     }
-    
-    /**
-     * Clear ID/EX register (insert bubble/NOP)
-     */
+
     private void clearID_EX() {
         pipelineRegisters.ID_EX.setReadData1(0);
         pipelineRegisters.ID_EX.setReadData2(0);
@@ -91,5 +91,9 @@ public class PipelineController {
         pipelineRegisters.ID_EX.setAluSrc(false);
         pipelineRegisters.ID_EX.setAluOp(0);
         pipelineRegisters.ID_EX.setInstruction(null);
+    }
+
+    public PipelineRegisters getPipelineRegisters() {
+        return pipelineRegisters;
     }
 }

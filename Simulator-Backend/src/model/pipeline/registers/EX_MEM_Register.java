@@ -2,10 +2,6 @@ package model.pipeline.registers;
 
 import model.instruction.Instruction;
 
-/**
- * EX/MEM Pipeline Register
- * Holds data between Execute and Memory stages
- */
 public class EX_MEM_Register {
 
     private int aluResult;

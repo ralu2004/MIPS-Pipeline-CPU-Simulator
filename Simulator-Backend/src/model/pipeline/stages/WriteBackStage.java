@@ -4,10 +4,6 @@ import model.cpu.CPUState;
 import model.pipeline.registers.MEM_WB_Register;
 import model.pipeline.registers.PipelineRegisters;
 
-/**
- * WB (Write-Back) Stage
- * Writes result back to register file
- */
 public class WriteBackStage implements PipelineStage {
 
     @Override

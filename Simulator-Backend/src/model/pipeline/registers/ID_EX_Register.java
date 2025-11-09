@@ -2,10 +2,6 @@ package model.pipeline.registers;
 
 import model.instruction.Instruction;
 
-/**
- * ID/EX Pipeline Register
- * Holds data between Instruction Decode and Execute stages
- */
 public class ID_EX_Register {
 
     private int readData1;

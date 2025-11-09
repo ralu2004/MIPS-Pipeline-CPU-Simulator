@@ -2,17 +2,13 @@ package model.pipeline.registers;
 
 import model.instruction.Instruction;
 
-/**
- * MEM/WB Pipeline Register
- * Holds data between Memory and Write-Back stages
- */
 public class MEM_WB_Register {
 
     private int aluResult;
     private int memData;
     private int destReg;
     private boolean regWrite;
-    private boolean memToReg;   // 1 = write memData, 0 = write aluResult
+    private boolean memToReg;
     private Instruction instruction;
 
     public void setAluResult(int value) { this.aluResult = value; }

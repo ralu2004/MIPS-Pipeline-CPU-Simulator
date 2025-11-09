@@ -8,10 +8,6 @@ import model.instruction.RTypeInstruction;
 import model.cpu.CPUState;
 import model.pipeline.registers.PipelineRegisters;
 
-/**
- * ID (Instruction Decode) Stage
- * Decodes instruction, reads registers, generates control signals
- */
 public class DecodeStage implements PipelineStage {
     
     private final ControlUnit controlUnit = new ControlUnit();

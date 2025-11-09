@@ -4,10 +4,6 @@ import model.cpu.CPUState;
 import model.instruction.Instruction;
 import model.pipeline.registers.PipelineRegisters;
 
-/**
- * IF (Instruction Fetch) Stage
- * Fetches nextinstruction from instruction memory at PC address
- */
 public class FetchStage implements PipelineStage {
 
     @Override
