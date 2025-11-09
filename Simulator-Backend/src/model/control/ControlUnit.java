@@ -1,9 +1,5 @@
 package model.control;
 
-/**
- * MIPS Control Unit
- * Generates control signals based on instruction opcode
- */
 public class ControlUnit {
   
     private boolean regWrite;    // Write to register file
@@ -20,10 +16,6 @@ public class ControlUnit {
         resetSignals();
     }
 
-    /**
-     * Generate control signals based on opcode
-     * @param opcode Instruction opcode (bits 31-26)
-     */
     public void generateSignals(int opcode) {
         resetSignals();
         
