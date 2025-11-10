@@ -32,7 +32,7 @@ public class ApiServer {
 		server.createContext("/api/reset", new ResetHandler(context));
 		server.createContext("/api/health", new HealthHandler());
 
-		server.setExecutor(null); 
+		server.setExecutor(null);
 	}
 
 	public void start() {

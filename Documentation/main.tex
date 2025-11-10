@@ -673,7 +673,7 @@ public abstract class Instruction {
 }
 \end{lstlisting}
 
-\subsubsection*{R-Type Instruction}
+\subsection*{R-Type Instruction}
 
 The \textbf{RTypeInstruction} class extracts its fields (two source registers, destination register, shift amount and function code) using bit shifting and masking:
 
@@ -689,7 +689,7 @@ public void decodeFields() {
 }
 \end{lstlisting}
 
-\subsubsection*{I-Type Instruction}
+\subsection*{I-Type Instruction}
 
 The \textbf{ITypeInstruction} class decodes the 16-bit immediate field, ensuring sign-extension where necessary:
 
@@ -704,7 +704,7 @@ public void decodeFields() {
 }
 \end{lstlisting}
 
-\subsubsection*{J-Type Instruction}
+\subsection*{J-Type Instruction}
 
 The \texttt{JTypeInstruction} class simply extracts the target address as:
 
@@ -717,7 +717,7 @@ public void decodeFields() {
 
 \subsection{Memory Subsystem}
 
-\subsubsection*{Instruction Memory}
+\subsection*{Instruction Memory}
 The \textbf{InstructionMemory} class stores and provides access to instruction objects in a fixed-size, word-aligned memory array (4 KB = 1024 words). The class provides methods for accessing the contents:
 \begin{itemize}
     \item Call \textbf{setInstruction(int, Instruction)} to store an instruction at a given address.
@@ -725,7 +725,7 @@ The \textbf{InstructionMemory} class stores and provides access to instruction o
 \end{itemize}
 If an address is outside the valid range (0--4092), \textbf{fetch()} returns \texttt{null} and \textbf{setInstruction()} does nothing.
 
-\subsubsection*{Data Memory}
+\subsection*{Data Memory}
 The \textbf{DataMemory} class provides word-aligned load and store operations for reading and writing 32-bit values through \textbf{loadWord(int)} and \textbf{storeWord(int, int)} methods. Out-of-range addresses are safely ignored:
 \begin{itemize}
     \item \texttt{loadWord(int)} returns 0 for invalid addresses.
@@ -734,11 +734,11 @@ The \textbf{DataMemory} class provides word-aligned load and store operations fo
 
 \subsection{CPU State Components}
 
-\subsubsection*{Register File}
+\subsection*{Register File}
 
 The \textbf{RegisterFile} class models the 32 general-purpose registers in the MIPS CPU through an Integer array. Register 0 (\$zero) is immutable and always holds the value 0. Other registers can be read and written using \textbf{get()} and \textbf{set()} methods.
 
-\subsubsection*{Program Counter}
+\subsection*{Program Counter}
 
 The \textbf{ProgramCounter} class models the program counter (PC) of the processor, tracking the address of the current instruction being executed, and providing additional methods to update it.
 \begin{itemize}
@@ -749,7 +749,7 @@ The \textbf{ProgramCounter} class models the program counter (PC) of the process
     \item An arbitrary offset can be added to the PC using \textbf{addOffset(int offset)}.
 \end{itemize}
 
-\subsubsection*{CPU State}
+\subsection*{CPU State}
 
 The \textbf{CPUState} class acts as a central container for the CPU's state, allowing pipeline stages or simulator code to access and modify registers, memory, and the PC. The instruction memory is provided via the constructor, while the other components are initialized internally.
 \begin{lstlisting}[style=javaStyle]
@@ -767,7 +767,7 @@ public class CPUState {
 
 \subsection{Control Handling}
 
-\subsubsection*{Control Unit}
+\subsection*{Control Unit}
 
 The \textbf{ControlUnit} class implements the control logic designed in Section~\ref{ch:design}. It generates control signals based on the instruction opcode to coordinate data flow and ALU operations for the full instruction set.
 
@@ -784,13 +784,13 @@ The \textbf{ControlUnit} class implements the control logic designed in Section~
     \item \texttt{jump} --- jump instruction
 \end{itemize}
 
-\subsubsection*{Hazard Detection Unit}
+\subsection*{Hazard Detection Unit}
 
 The \textbf{HazardDetectionUnit} implements the hazard detection mechanism described in the design. It monitors the \textbf{PipelineRegisters} to detect data, control, and structural hazards through dedicated methods: \textbf{checkDataHazards(regs)}, \textbf{checkControlHazards(regs)}, \textbf{checkStructuralHazards(regs)}. 
 
 It reports detected hazards through a \textbf{HazardReport} object, which lists all detected conditions and indicates whether stalling or flushing is required. Supporting units such as \textbf{ForwardingUnit} and \textbf{StallUnit} use this information to apply the appropriate solution.
 
-\subsubsection*{Forwarding Unit}
+\subsection*{Forwarding Unit}
 
 The \textbf{ForwardingUnit} resolves data hazards by forwarding results from later pipeline stages to the ALU inputs in the \textbf{EX} stage. It compares the source registers (\texttt{Rs}, \texttt{Rt}) of the instruction in the \textbf{ID/EX} pipeline register with the destination registers of the instructions in the \textbf{EX/MEM} and \textbf{MEM/WB} pipeline registers. 
 
@@ -815,7 +815,7 @@ public static class ForwardingResult {
 }
 \end{lstlisting}
 
-\subsubsection*{Stall Unit}
+\subsection*{Stall Unit}
 
 The \textbf{StallUnit} receives hazard detection signals from the \textbf{HazardDetectionUnit} and issues stall control signals when a \textit{load-use hazard} is detected.
 
@@ -837,7 +837,7 @@ public static class StallControl {
 
 \subsection{Pipeline Representation}
 
-\subsubsection*{Pipeline Stages}
+\subsection*{Pipeline Stages}
 
 The MIPS CPU pipeline is implemented through five concrete classes, each derived from the \textbf{PipelineStage} interface:
 \begin{lstlisting}[style=javaStyle]
@@ -860,7 +860,7 @@ Each stage implements the functionality outlined in Section~\ref{ch:design}:
     \item \textbf{Write Back (WB)} --- Writes the result of an ALU operation or a value loaded from memory back into the register file.
 \end{itemize}
 
-\subsubsection*{Pipeline Registers}
+\subsection*{Pipeline Registers}
 
 The pipeline register classes implement the buffering mechanism between pipeline stages:
 
@@ -896,7 +896,7 @@ The method \textbf{getWriteData()} selects between ALU result and memory data ba
 
 \subsection{The Simulation Engine}
 
-\subsubsection*{Pipeline Controller}
+\subsection*{Pipeline Controller}
 
 The \textbf{PipelineController} implements the central coordination logic for the 5-stage MIPS pipeline, integrating CPU state and pipeline registers to simulate concurrent instruction execution.
 
@@ -927,7 +927,7 @@ The controller processes stages in reverse order (WB $\rightarrow$ MEM $\rightar
     \item \textbf{Control Hazards:} Branch instructions follow a \textit{predict-not-taken} policy. If a branch is taken, the controller flushes \textbf{IF/ID} and \textbf{ID/EX} registers, introducing a two-cycle penalty.
 \end{itemize}
 
-\subsubsection*{Clock}
+\subsection*{Clock}
 
 The \textbf{Clock} class simulates the global clock of the MIPS pipeline, advancing the pipeline cycle by cycle through the \textbf{PipelineController}.
 
@@ -956,13 +956,19 @@ public class Clock {
 The \textbf{tick()} method advances the simulation by one clock cycle, while \textbf{run(int n)} executes multiple cycles in sequence, supporting both step-by-step and continuous execution modes.
 
 \subsection{Program Loading and Instruction Parsing}
+\subsection*{Program Loader}
 
-\subsubsection*{Instruction Factory}
+The \textbf{ProgramLoader} class handles initialization and loading of MIPS programs into instruction memory, supporting multiple input formats:
 
-The \textbf{InstructionFactory} utility class provides centralized parsing of 32-bit binary instruction words into corresponding instruction objects using a factory pattern.
+\begin{itemize}
+    \item \textbf{Integer Array:} Direct 32-bit integer values representing binary instruction words
+    \item \textbf{Hexadecimal Strings:} Text-based hex representation (with or without \texttt{0x} prefix)
+\end{itemize}
 
-\begin{lstlisting}[style=javaStyle]
-public class InstructionFactory {
+Key features include:
+\begin{itemize}
+    \item \textbf{Instruction Parsing:} examines the 6 most significant bits (opcode) to determine instruction format.
+    \begin{lstlisting}[style=javaStyle]
     public static Instruction parseInstruction(int binaryWord) {
         int opcode = (binaryWord >> 26) & 0x3F;
         
@@ -974,27 +980,7 @@ public class InstructionFactory {
             return new ITypeInstruction(opcode, binaryWord);
         }
     }
-}
-\end{lstlisting}
-
-The factory examines the 6 most significant bits (opcode) to determine instruction format:
-\begin{itemize}
-    \item Opcode \texttt{0x00} indicates R-type instruction
-    \item Opcodes \texttt{0x02} or \texttt{0x03} indicate J-type instructions
-    \item All other opcodes indicate I-type instructions
-\end{itemize}
-
-\subsubsection*{Program Loader}
-
-The \textbf{ProgramLoader} class handles initialization and loading of MIPS programs into instruction memory, supporting multiple input formats:
-
-\begin{itemize}
-    \item \textbf{Integer Array:} Direct 32-bit integer values representing binary instruction words
-    \item \textbf{Hexadecimal Strings:} Text-based hex representation (with or without \texttt{0x} prefix)
-\end{itemize}
-
-Key features include:
-\begin{itemize}
+    \end{lstlisting}
     \item \textbf{Address Validation:} Ensures instruction addresses are word-aligned and within memory bounds
     \item \textbf{Bounds Checking:} Prevents loading instructions beyond memory capacity
     \item \textbf{Warning System:} Collects warnings for out-of-bounds instructions without failing the load operation
@@ -1023,41 +1009,44 @@ The \textbf{ProgramLoadResult} class encapsulates load operation outcomes:
     \item List of warnings generated during loading
 \end{itemize}
 
-\begin{comment}
 \subsection{API Server and Frontend Integration}
 
-To enable web-based interaction with the simulator, a lightweight HTTP API server was implemented using Java's built-in \texttt{HttpServer}. This API provides a RESTful interface for controlling the simulation and querying CPU state.
+To enable web-based interaction with the simulator, a lightweight HTTP API server was implemented using Java's built-in \textbf{HttpServer}. This API provides a RESTful interface for controlling the simulation and querying CPU state.
 
-\subsubsection*{API Architecture}
+\subsection*{API Architecture}
 
-The \textbf{ApiServer} class manages HTTP request handling and coordinates between the simulation engine and external clients. It maintains references to the \texttt{CPUState}, \texttt{PipelineController}, and \texttt{Clock} instances, ensuring a single source of truth for the simulation state.
+The \textbf{ApiServer} class manages HTTP request handling and coordinates between the simulation engine and external clients. It maintains references to the \textbf{HttpServer} object and \textbf{ServerContext}.
 
 \begin{lstlisting}[style=javaStyle]
 public class ApiServer {
     private final HttpServer server;
-    private final CPUState cpuState;
-    private final PipelineController controller;
-    private final Clock clock;
-
+    private final ServerContext context;
+    
     public ApiServer(int port) throws IOException {
-        this.cpuState = new CPUState(new InstructionMemory());
-        this.controller = new PipelineController(cpuState);
-        this.clock = new Clock(controller);
-        
-        this.server = HttpServer.create(new InetSocketAddress(port), 0);
-        // Register API endpoints
-        server.createContext("/api/load", new LoadHandler());
-        server.createContext("/api/step", new StepHandler());
-        server.createContext("/api/state", new StateHandler());
-        server.createContext("/api/reset", new ResetHandler());
-        server.createContext("/api/health", new HealthHandler());
-    }
+		CPUState cpuState = new CPUState(new InstructionMemory());
+		PipelineController controller = new PipelineController(cpuState);
+		Clock clock = new Clock(controller);
+		this.context = new ServerContext(cpuState, controller, clock);
+
+		this.server = HttpServer.create(new InetSocketAddress(port), 0);
+
+		server.createContext("/api/load", new LoadHandler(context));
+		server.createContext("/api/step", new StepHandler(context));
+		server.createContext("/api/state", new StateHandler(context));
+		server.createContext("/api/reset", new ResetHandler(context));
+		server.createContext("/api/health", new HealthHandler());
+
+		server.setExecutor(null);
+	}
 }
 \end{lstlisting}
 
-\subsubsection*{API Endpoints}
+\subsection*{Server Context}
+The \textbf{ServerContext} class wraps the \textbf{CPUState}, \textbf{PipelineController}, and \textbf{Clock} instances to maintain a single source of information during the simulation. It can be said that the core of the simulator is kept here.
 
-The API exposes five main endpoints:
+\subsection*{API Endpoints}
+
+The API exposes five main endpoints, each taken care of by a handler class— \textbf{LoadHandler}, \textbf{StepHandler}, \textbf{StateHandler}, \textbf{ResetHandler}, \textbf{HealthHandler}:
 
 \begin{enumerate}
     \item \textbf{POST /api/load} --- Loads a program into instruction memory
@@ -1095,7 +1084,7 @@ The API exposes five main endpoints:
     \end{itemize}
 \end{enumerate}
 
-\subsubsection*{Cross-Origin Resource Sharing (CORS)}
+\subsection*{Cross-Origin Resource Sharing (CORS)}
 
 The API server implements CORS headers to allow web-based frontends running on different origins to communicate with the simulator. All endpoints include the following headers:
 
@@ -1105,9 +1094,9 @@ The API server implements CORS headers to allow web-based frontends running on d
     \item \texttt{Access-Control-Allow-Headers: Content-Type}
 \end{itemize}
 
-This enables frontend applications hosted separately from the backend to make API requests without browser security restrictions.
+This enables the frontend application, hosted separately from the backend to make API requests without browser security restrictions. 
 
-\subsubsection*{State Serialization}
+\subsection*{State Serialization}
 
 The \textbf{StateSerializer} class converts the internal CPU and pipeline state into JSON format for transmission to the frontend. This serialization process:
 
@@ -1138,7 +1127,7 @@ The serialized state enables the frontend to:
     \item Highlight data dependencies and hazards
 \end{itemize}
 
-\subsubsection*{Error Handling}
+\subsection*{Error Handling}
 
 The API implements robust error handling:
 \begin{itemize}
@@ -1148,8 +1137,7 @@ The API implements robust error handling:
     \item Exceptions are caught and returned as JSON error responses
 \end{itemize}
 
-This design ensures that the frontend receives meaningful error messages and can gracefully handle exceptional conditions during simulation.
-\end{comment}
+This design ensures that the frontend receives meaningful error messages and can handle any conditions that may arise during simulation.
 
 \printbibliography
 \nocite{*}
