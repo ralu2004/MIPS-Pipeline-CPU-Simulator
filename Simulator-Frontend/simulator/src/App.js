@@ -1,27 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Upload, Cpu, AlertCircle, CheckCircle, StepForward, RefreshCw } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Cpu, AlertCircle, CheckCircle, StepForward, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:85';
-
-// Sample MIPS programs in hex format
-const SAMPLE_PROGRAMS = {
-  'Simple ADD': {
-    code: '00221820\n00832022\n00a42824\n00c53025',
-    description: 'Basic arithmetic operations: add, sub, and, or'
-  },
-  'Memory Operations': {
-    code: '8c010000\n8c020004\n00221820\nac030008',
-    description: 'Load two values, add them, store result'
-  },
-  'Branch Test': {
-    code: '00221820\n10400002\n00832022\n00a42824',
-    description: 'Conditional branch with data dependency'
-  },
-  'Data Hazard Demo': {
-    code: '00221820\n00622020\n00832820\n00a33020',
-    description: 'RAW hazards demonstrating forwarding'
-  }
-};
 
 // MIPS register names
 const REGISTER_NAMES = [
@@ -31,6 +11,75 @@ const REGISTER_NAMES = [
   '$t8', '$t9', '$k0', '$k1', '$gp', '$sp', '$fp', '$ra'
 ];
 
+// Sample MIPS programs with hex and assembly
+const SAMPLE_PROGRAMS = {
+  'Simple ADD': {
+    code: '00221820\n00832022\n00a42824\n00c53025',
+    assembly: 'add $3, $1, $2\nadd $4, $4, $3\nand $5, $5, $4\nor $6, $6, $5',
+    description: 'Basic arithmetic operations'
+  },
+  'Memory Operations': {
+    code: '8c010000\n8c020004\n00221820\nac030008',
+    assembly: 'lw $1, 0($0)\nlw $2, 4($0)\nadd $3, $1, $2\nsw $3, 8($0)',
+    description: 'Load, compute, and store'
+  },
+  'Branch Test': {
+    code: '00221820\n10400002\n00832022\n00a42824',
+    assembly: 'add $3, $1, $2\nbeq $2, $0, 2\nadd $4, $4, $3\nand $5, $5, $4',
+    description: 'Conditional branching'
+  },
+  'Data Hazard Demo': {
+    code: '00221820\n00622020\n00832820\n00a33020',
+    assembly: 'add $3, $1, $2\nadd $4, $3, $2\nadd $5, $4, $3\nadd $6, $5, $3',
+    description: 'Back-to-back dependencies'
+  }
+};
+
+// Register descriptions for tooltips
+const REGISTER_INFO = {
+  '$zero': 'Constant value 0 (read-only)',
+  '$at': 'Assembler temporary',
+  '$v0': 'Function return value 0',
+  '$v1': 'Function return value 1',
+  '$a0': 'Function argument 0',
+  '$a1': 'Function argument 1',
+  '$a2': 'Function argument 2',
+  '$a3': 'Function argument 3',
+  '$t0': 'Temporary register 0',
+  '$t1': 'Temporary register 1',
+  '$t2': 'Temporary register 2',
+  '$t3': 'Temporary register 3',
+  '$t4': 'Temporary register 4',
+  '$t5': 'Temporary register 5',
+  '$t6': 'Temporary register 6',
+  '$t7': 'Temporary register 7',
+  '$s0': 'Saved register 0 (preserved)',
+  '$s1': 'Saved register 1 (preserved)',
+  '$s2': 'Saved register 2 (preserved)',
+  '$s3': 'Saved register 3 (preserved)',
+  '$s4': 'Saved register 4 (preserved)',
+  '$s5': 'Saved register 5 (preserved)',
+  '$s6': 'Saved register 6 (preserved)',
+  '$s7': 'Saved register 7 (preserved)',
+  '$t8': 'Temporary register 8',
+  '$t9': 'Temporary register 9',
+  '$k0': 'Kernel/OS reserved 0',
+  '$k1': 'Kernel/OS reserved 1',
+  '$gp': 'Global pointer',
+  '$sp': 'Stack pointer',
+  '$fp': 'Frame pointer',
+  '$ra': 'Return address'
+};
+
+// Pipeline stage descriptions
+const STAGE_INFO = {
+  'IF': 'Instruction Fetch: Fetches the next instruction from memory using the Program Counter',
+  'ID': 'Instruction Decode: Decodes the instruction and reads register operands',
+  'EX': 'Execute: Performs ALU operations or calculates memory addresses',
+  'MEM': 'Memory Access: Reads from or writes to data memory for load/store instructions',
+  'WB': 'Write Back: Writes the result back to the destination register'
+};
+
 export default function MIPSSimulator() {
   const [cpuState, setCpuState] = useState(null);
   const [customCode, setCustomCode] = useState('');
@@ -38,7 +87,7 @@ export default function MIPSSimulator() {
   const [isRunning, setIsRunning] = useState(false);
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiPort, setApiPort] = useState(85);
+  const [showProgramLoader, setShowProgramLoader] = useState(true);
 
   // API Functions
   const fetchState = useCallback(async () => {
@@ -72,9 +121,10 @@ export default function MIPSSimulator() {
       await fetchState();
       setMessage({ 
         type: 'success', 
-        text: `✓ Program loaded: ${result.loaded} instruction(s) at address ${result.start}` 
+        text: `✓ Program loaded: ${result.loaded} instruction(s)` 
       });
       setTimeout(() => setMessage(null), 3000);
+      setShowProgramLoader(false); 
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Failed to load program' });
     } finally {
@@ -89,7 +139,7 @@ export default function MIPSSimulator() {
       if (!res.ok) throw new Error('Step failed');
       await fetchState();
       setMessage({ type: 'success', text: `✓ Executed ${cycles} cycle(s)` });
-      setTimeout(() => setMessage(null), 2000);
+      setTimeout(() => setMessage(null), 1500);
     } catch (err) {
       setMessage({ type: 'error', text: 'Execution failed' });
     } finally {
@@ -100,15 +150,31 @@ export default function MIPSSimulator() {
   const reset = async () => {
     setIsLoading(true);
     try {
+      // Clear local state immediately for visual feedback
+      setCpuState(null);
+      
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
-      await fetchState();
+      
+      // Small delay to ensure backend has processed the reset
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch fresh state from backend - force a clean fetch
+      const stateRes = await fetch(`${API_BASE}/api/state`);
+      if (stateRes.ok) {
+        const data = await stateRes.json();
+        setCpuState(data);
+      }
+      
       setCustomCode('');
       setSelectedProgram('');
+      setShowProgramLoader(true);
       setMessage({ type: 'success', text: '✓ Simulator reset' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Reset failed' });
+      // Still try to fetch state even if reset had issues
+      await fetchState();
     } finally {
       setIsLoading(false);
     }
@@ -117,8 +183,6 @@ export default function MIPSSimulator() {
   // Effects
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 2000); // Auto-refresh every 2 seconds
-    return () => clearInterval(interval);
   }, [fetchState]);
 
   useEffect(() => {
@@ -127,7 +191,6 @@ export default function MIPSSimulator() {
       return () => clearInterval(interval);
     }
   }, [isRunning]);
-
 
   const handleLoadSample = (programName) => {
     setSelectedProgram(programName);
@@ -147,19 +210,97 @@ export default function MIPSSimulator() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+      
+      {/* FIXED CONTROL BAR */}
+      <div className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-lg border-b-2 border-purple-500/30 shadow-xl">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
+            <div className="flex items-center gap-3">
+              <Cpu className="w-8 h-8 text-purple-400" />
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  MIPS Pipeline Simulator
+                </h1>
+                <p className="text-xs text-slate-400">5-Stage Pipelined Processor</p>
+              </div>
+            </div>
+
+            {/* Program Counter Display */}
+            {cpuState && (
+              <div className="flex items-center gap-4 bg-slate-800/80 rounded-lg px-4 py-2 border border-purple-500/30">
+                <div className="text-center">
+                  <div className="text-xs text-slate-400">PC</div>
+                  <div className="text-2xl font-mono font-bold text-purple-400">
+                    {cpuState.pc || 0}
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400">
+                  0x{(cpuState.pc || 0).toString(16).toUpperCase().padStart(8, '0')}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Control Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => step(1)}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <StepForward className="w-4 h-4" />
+              Step 1
+            </button>
+            <button
+              onClick={() => step(5)}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <StepForward className="w-4 h-4" />
+              Step 5
+            </button>
+            <button
+              onClick={() => setIsRunning(!isRunning)}
+              disabled={isLoading}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm ${
+                isRunning 
+                  ? 'bg-red-600 hover:bg-red-500' 
+                  : 'bg-green-600 hover:bg-green-500'
+              }`}
+            >
+              {isRunning ? <><Pause className="w-4 h-4" />Pause</> : <><Play className="w-4 h-4" />Run</>}
+            </button>
+            <button
+              onClick={reset}
+              disabled={isLoading}
+              className="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Reset
+            </button>
+            <button
+              onClick={fetchState}
+              disabled={isLoading}
+              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
+            <button
+              onClick={() => setShowProgramLoader(!showProgramLoader)}
+              className="ml-auto bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Load Program
+              {showProgramLoader ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         
-        {/* Header */}
-        <header className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Cpu className="w-10 h-10 sm:w-12 sm:h-12 text-purple-400" />
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              MIPS Pipeline Simulator
-            </h1>
-          </div>
-          <p className="text-slate-300 text-sm sm:text-base">5-Stage Pipelined Processor Visualization</p>
-        </header>
-
         {/* Status Message */}
         {message && (
           <div className={`mb-6 p-4 rounded-lg border-2 flex items-center gap-2 animate-fade-in ${
@@ -172,120 +313,65 @@ export default function MIPSSimulator() {
           </div>
         )}
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left Column: Controls */}
-          <div className="lg:col-span-3 space-y-6">
-            
-            {/* Sample Programs */}
-            <Card title="📚 Sample Programs">
-              <div className="space-y-2">
-                {Object.keys(SAMPLE_PROGRAMS).map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => handleLoadSample(name)}
-                    disabled={isLoading}
-                    className={`w-full text-left p-3 rounded-lg transition-all ${
-                      selectedProgram === name
-                        ? 'bg-purple-600 border-2 border-purple-400'
-                        : 'bg-slate-800 hover:bg-slate-700 border-2 border-transparent'
-                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <div className="font-semibold">{name}</div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      {SAMPLE_PROGRAMS[name].description}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-
-            {/* Custom Program */}
-            <Card title="✏️ Custom Program">
-              <textarea
-                value={customCode}
-                onChange={(e) => setCustomCode(e.target.value)}
-                placeholder="Enter hex instructions (one per line)&#10;Example:&#10;00221820&#10;00832022"
-                className="w-full h-32 bg-slate-900 border-2 border-slate-700 rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-purple-500 resize-none"
-                disabled={isLoading}
-              />
-              <button
-                onClick={handleLoadCustom}
-                disabled={isLoading}
-                className="w-full mt-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Upload className="w-4 h-4" />
-                {isLoading ? 'Loading...' : 'Load Custom Code'}
-              </button>
-            </Card>
-
-            {/* Execution Controls */}
-            <Card title="⚡ Execution Control">
-              <div className="space-y-2">
-                <button
-                  onClick={() => step(1)}
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <StepForward className="w-4 h-4" />
-                  Step 1 Cycle
-                </button>
-                <button
-                  onClick={() => step(5)}
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <StepForward className="w-4 h-4" />
-                  Step 5 Cycles
-                </button>
-                <button
-                  onClick={() => setIsRunning(!isRunning)}
-                  disabled={isLoading}
-                  className={`w-full px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isRunning 
-                      ? 'bg-red-600 hover:bg-red-500' 
-                      : 'bg-green-600 hover:bg-green-500'
-                  }`}
-                >
-                  {isRunning ? <><Pause className="w-5 h-5" />Pause</> : <><Play className="w-5 h-5" />Run Auto</>}
-                </button>
-                <button
-                  onClick={reset}
-                  disabled={isLoading}
-                  className="w-full bg-slate-600 hover:bg-slate-500 px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  Reset All
-                </button>
-                <button
-                  onClick={fetchState}
-                  disabled={isLoading}
-                  className="w-full bg-slate-700 hover:bg-slate-600 px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh State
-                </button>
-              </div>
-            </Card>
-
-            {/* Program Counter */}
-            {cpuState && (
-              <Card title="📍 Program Counter">
-                <div className="bg-slate-900 rounded-lg p-6 text-center">
-                  <div className="text-4xl font-mono font-bold text-purple-400">
-                    {cpuState.pc || 0}
-                  </div>
-                  <div className="text-sm text-slate-400 mt-2">
-                    0x{(cpuState.pc || 0).toString(16).toUpperCase().padStart(8, '0')}
-                  </div>
+        {/* COLLAPSIBLE PROGRAM LOADER */}
+        {showProgramLoader && (
+          <div className="mb-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Sample Programs */}
+              <Card title="📚 Sample Programs">
+                <div className="space-y-2">
+                  {Object.keys(SAMPLE_PROGRAMS).map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => handleLoadSample(name)}
+                      disabled={isLoading}
+                      className={`w-full text-left p-3 rounded-lg transition-all ${
+                        selectedProgram === name
+                          ? 'bg-purple-600 border-2 border-purple-400'
+                          : 'bg-slate-800 hover:bg-slate-700 border-2 border-transparent'
+                      } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="font-semibold mb-1">{name}</div>
+                      <div className="text-xs text-slate-400 mb-2">
+                        {SAMPLE_PROGRAMS[name].description}
+                      </div>
+                      <div className="font-mono text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
+                        {SAMPLE_PROGRAMS[name].assembly.split('\n').map((line, i) => (
+                          <div key={i} className="text-green-400">{line}</div>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </Card>
-            )}
-          </div>
 
-          {/* Middle Column: Pipeline */}
-          <div className="lg:col-span-5">
+              {/* Custom Program */}
+              <Card title="✏️ Custom Program">
+                <textarea
+                  value={customCode}
+                  onChange={(e) => setCustomCode(e.target.value)}
+                  placeholder="Enter hex instructions (one per line)&#10;Example:&#10;00221820&#10;00832022"
+                  className="w-full h-40 bg-slate-900 border-2 border-slate-700 rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-purple-500 resize-none"
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={handleLoadCustom}
+                  disabled={isLoading}
+                  className="w-full mt-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Upload className="w-4 h-4" />
+                  {isLoading ? 'Loading...' : 'Load Custom Code'}
+                </button>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* SIMULATION VIEW */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Pipeline Stages - Takes up more space */}
+          <div className="lg:col-span-6">
             <Card title="🔄 Pipeline Stages">
               {cpuState?.pipeline ? (
                 <PipelineVisualization pipeline={cpuState.pipeline} />
@@ -295,8 +381,9 @@ export default function MIPSSimulator() {
             </Card>
           </div>
 
-          {/* Right Column: Registers & Memory */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* Registers and Memory */}
+          <div className="lg:col-span-6 space-y-6">
+            {/* Registers */}
             <Card title="💾 Registers">
               {cpuState?.registers ? (
                 <RegisterGrid registers={cpuState.registers} />
@@ -305,11 +392,14 @@ export default function MIPSSimulator() {
               )}
             </Card>
 
-            {cpuState?.dataMemory && Object.keys(cpuState.dataMemory).length > 0 && (
-              <Card title="📦 Data Memory">
-                <DataMemoryView memory={cpuState.dataMemory} />
-              </Card>
-            )}
+            {/* Data Memory */}
+            <Card title="📦 Data Memory">
+              {cpuState?.dataMemory ? (
+                <MemoryGrid memory={cpuState.dataMemory} />
+              ) : (
+                <EmptyState text="Memory view will appear here when available" />
+              )}
+            </Card>
           </div>
         </div>
       </div>
@@ -336,27 +426,50 @@ function PipelineVisualization({ pipeline }) {
     { name: 'WB', key: 'MEM_WB', label: 'Write Back', isWB: true }
   ];
 
+  // Check if pipeline is actually empty (all stages have no instructions)
+  const isPipelineEmpty = !pipeline || stages.every(stage => {
+    const stageData = pipeline[stage.key];
+    return !stageData?.instruction || 
+           stageData.instruction === null || 
+           !stageData.instruction.hex || 
+           stageData.instruction.hex === 'null';
+  });
+
+  if (isPipelineEmpty) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-slate-400 text-sm mb-2">Pipeline is empty</div>
+        <div className="text-slate-500 text-xs">Load a program and step through execution to see instructions flow through the pipeline</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {stages.map((stage, index) => {
         const stageData = pipeline[stage.key];
         const hasInstruction = stageData?.instruction && 
           stageData.instruction !== null && 
           stageData.instruction.hex && 
-          stageData.instruction.hex !== 'null';
+          stageData.instruction.hex !== 'null' &&
+          stageData.instruction.hex !== '0x00000000';
         
         return (
-          <div key={stage.name} className="relative">
-            {/* Stage Box */}
+          <div key={stage.name} className="relative group">
             <div className={`bg-slate-900 rounded-lg p-4 border-2 transition-all ${
               hasInstruction 
                 ? 'border-purple-500 shadow-lg shadow-purple-500/20' 
                 : 'border-slate-700'
             }`}>
               <div className="flex justify-between items-center mb-2">
-                <div>
+                <div className="relative">
                   <span className="font-bold text-lg text-purple-400">{stage.name}</span>
                   <span className="text-xs text-slate-400 ml-2">{stage.label}</span>
+                  {/* Tooltip on hover */}
+                  <div className="absolute left-0 top-8 w-72 bg-slate-800 border border-purple-500 rounded-lg p-3 text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl">
+                    <div className="font-bold text-purple-400 mb-1">{stage.name} Stage</div>
+                    {STAGE_INFO[stage.name]}
+                  </div>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-semibold ${
                   hasInstruction ? 'bg-green-500' : 'bg-slate-700'
@@ -374,24 +487,20 @@ function PipelineVisualization({ pipeline }) {
                     <div className="text-xs text-slate-400">PC: {stageData.pc}</div>
                   )}
                   {stageData.aluResult !== undefined && stageData.aluResult !== null && (
-                    <div className="text-xs text-slate-400">ALU: {stageData.aluResult}</div>
+                    <div className="text-xs text-amber-300">ALU: {stageData.aluResult}</div>
                   )}
                   {stageData.destReg !== undefined && stageData.destReg !== null && stageData.destReg >= 0 && (
-                    <div className="text-xs text-purple-300">Dest: {REGISTER_NAMES[stageData.destReg] || `$${stageData.destReg}`}</div>
+                    <div className="text-xs text-purple-300">
+                      Dest: {REGISTER_NAMES[stageData.destReg] || `$${stageData.destReg}`}
+                    </div>
                   )}
                   {stageData.branchTaken !== undefined && stageData.branchTaken !== null && (
                     <div className={`text-xs ${stageData.branchTaken ? 'text-red-400' : 'text-slate-400'}`}>
-                      Branch: {stageData.branchTaken ? 'TAKEN' : 'NOT TAKEN'}
+                      Branch: {stageData.branchTaken ? '✓ TAKEN' : '✗ NOT TAKEN'}
                     </div>
                   )}
                   {stage.isWB && stageData.writeData !== undefined && stageData.writeData !== null && (
-                    <div className="text-xs text-green-300">Write: {stageData.writeData} → {REGISTER_NAMES[stageData.destReg] || `$${stageData.destReg}`}</div>
-                  )}
-                  {stage.isMEM && stageData.memRead && (
-                    <div className="text-xs text-blue-300">Load from memory</div>
-                  )}
-                  {stage.isMEM && stageData.memWrite && (
-                    <div className="text-xs text-orange-300">Store to memory</div>
+                    <div className="text-xs text-green-300">Write: {stageData.writeData}</div>
                   )}
                 </div>
               ) : (
@@ -399,10 +508,9 @@ function PipelineVisualization({ pipeline }) {
               )}
             </div>
             
-            {/* Arrow to next stage */}
             {index < stages.length - 1 && (
-              <div className="flex justify-center my-2">
-                <div className="w-0.5 h-4 bg-purple-500"></div>
+              <div className="flex justify-center my-1">
+                <div className="w-0.5 h-3 bg-purple-500/50"></div>
               </div>
             )}
           </div>
@@ -413,37 +521,20 @@ function PipelineVisualization({ pipeline }) {
 }
 
 function RegisterGrid({ registers }) {
-  // Handle both array and object formats
   const registerArray = Array.isArray(registers) 
     ? registers 
-    : Object.values(registers).map((v, i) => ({ index: i, value: v }));
+    : Object.values(registers);
   
   return (
-    <div className="grid grid-cols-2 gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
-      {Array.isArray(registers) ? (
-        registers.map((value, index) => (
-          <RegisterDisplay 
-            key={index} 
-            name={REGISTER_NAMES[index]} 
-            value={value}
-            index={index}
-          />
-        ))
-      ) : (
-        Object.entries(registers).map(([key, value]) => {
-          const index = key.startsWith('$') 
-            ? REGISTER_NAMES.indexOf(key)
-            : parseInt(key.replace('$', '')) || parseInt(key);
-          return (
-            <RegisterDisplay 
-              key={key} 
-              name={REGISTER_NAMES[index] || key} 
-              value={value}
-              index={index}
-            />
-          );
-        })
-      )}
+    <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+      {registerArray.map((value, index) => (
+        <RegisterDisplay 
+          key={index} 
+          name={REGISTER_NAMES[index]} 
+          value={value}
+          index={index}
+        />
+      ))}
     </div>
   );
 }
@@ -451,38 +542,51 @@ function RegisterGrid({ registers }) {
 function RegisterDisplay({ name, value, index }) {
   const isZero = index === 0;
   const hasValue = value !== 0 || isZero;
+  const info = REGISTER_INFO[name] || 'General purpose register';
   
   return (
-    <div className={`bg-slate-900 rounded p-2 border transition-all ${
+    <div className={`bg-slate-900 rounded p-2 border transition-all relative group ${
       hasValue ? 'border-purple-500/50' : 'border-slate-700'
     }`}>
       <div className="text-xs text-purple-400 font-bold">{name}</div>
-      <div className="font-mono text-sm text-slate-300">
-        {value}
-      </div>
+      <div className="font-mono text-sm text-slate-300">{value}</div>
       <div className="text-xs text-slate-500 font-mono">
         0x{value.toString(16).toUpperCase().padStart(8, '0')}
+      </div>
+      
+      {/* Tooltip on hover */}
+      <div className="absolute left-0 top-full mt-2 w-48 bg-slate-800 border border-purple-500 rounded-lg p-2 text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl">
+        <div className="font-bold text-purple-400 mb-1">{name}</div>
+        {info}
       </div>
     </div>
   );
 }
 
-function DataMemoryView({ memory }) {
-  const entries = Object.entries(memory)
-    .map(([addr, value]) => ({ addr: parseInt(addr), value }))
-    .sort((a, b) => a.addr - b.addr)
-    .slice(0, 20); // Show first 20 non-zero entries
+function MemoryGrid({ memory }) {
+  // Handle both array and object formats
+  const memoryEntries = Array.isArray(memory)
+    ? memory.map((value, addr) => ({ addr, value })).filter(e => e.value !== 0)
+    : Object.entries(memory).map(([addr, value]) => ({ 
+        addr: parseInt(addr), 
+        value 
+      })).filter(e => e.value !== 0);
 
-  if (entries.length === 0) {
-    return <div className="text-slate-400 text-sm">No data in memory</div>;
+  if (memoryEntries.length === 0) {
+    return <div className="text-slate-400 text-sm text-center py-4">No data in memory</div>;
   }
 
   return (
-    <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
-      {entries.map(({ addr, value }) => (
-        <div key={addr} className="flex justify-between items-center p-2 bg-slate-900 rounded text-sm">
-          <span className="font-mono text-purple-400">0x{addr.toString(16).toUpperCase().padStart(8, '0')}</span>
-          <span className="font-mono text-slate-300">{value}</span>
+    <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+      {memoryEntries.slice(0, 32).map(({ addr, value }) => (
+        <div key={addr} className="bg-slate-900 rounded p-2 border border-purple-500/50">
+          <div className="text-xs text-purple-400 font-bold font-mono">
+            [0x{addr.toString(16).toUpperCase().padStart(4, '0')}]
+          </div>
+          <div className="font-mono text-sm text-slate-300">{value}</div>
+          <div className="text-xs text-slate-500 font-mono">
+            0x{value.toString(16).toUpperCase().padStart(8, '0')}
+          </div>
         </div>
       ))}
     </div>
@@ -491,7 +595,7 @@ function DataMemoryView({ memory }) {
 
 function EmptyState({ text }) {
   return (
-    <div className="text-center text-slate-400 py-8">
+    <div className="text-center text-slate-400 py-8 text-sm">
       {text}
     </div>
   );
