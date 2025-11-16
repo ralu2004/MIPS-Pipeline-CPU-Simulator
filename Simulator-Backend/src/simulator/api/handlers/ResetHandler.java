@@ -36,6 +36,7 @@ public class ResetHandler implements HttpHandler {
             int pc = HttpUtils.parseIntOrDefault(params.get("pc"), 0);
 
             ProgramLoader.resetState(context.cpuState, clearRegs, clearMem, pc);
+            context.controller.clearPipeline();
 
             HttpUtils.sendJson(exchange, 200, "{\"ok\":true}");
 

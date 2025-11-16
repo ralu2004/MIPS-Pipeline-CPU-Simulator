@@ -96,4 +96,32 @@ public class PipelineController {
     public PipelineRegisters getPipelineRegisters() {
         return pipelineRegisters;
     }
+
+    /**
+     * Clears all pipeline registers - used when resetting the simulator
+     */
+    public void clearPipeline() {
+        pipelineRegisters.IF_ID.set(null, 0);
+        clearID_EX();
+
+        pipelineRegisters.EX_MEM.setAluResult(0);
+        pipelineRegisters.EX_MEM.setZeroFlag(false);
+        pipelineRegisters.EX_MEM.setWriteData(0);
+        pipelineRegisters.EX_MEM.setBranchTarget(0);
+        pipelineRegisters.EX_MEM.setBranchTaken(false);
+        pipelineRegisters.EX_MEM.setDestReg(-1);
+        pipelineRegisters.EX_MEM.setRegWrite(false);
+        pipelineRegisters.EX_MEM.setMemToReg(false);
+        pipelineRegisters.EX_MEM.setBranch(false);
+        pipelineRegisters.EX_MEM.setMemRead(false);
+        pipelineRegisters.EX_MEM.setMemWrite(false);
+        pipelineRegisters.EX_MEM.setInstruction(null);
+        
+        pipelineRegisters.MEM_WB.setAluResult(0);
+        pipelineRegisters.MEM_WB.setMemData(0);
+        pipelineRegisters.MEM_WB.setDestReg(-1);
+        pipelineRegisters.MEM_WB.setRegWrite(false);
+        pipelineRegisters.MEM_WB.setMemToReg(false);
+        pipelineRegisters.MEM_WB.setInstruction(null);
+    }
 }
