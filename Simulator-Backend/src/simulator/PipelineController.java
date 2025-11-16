@@ -116,7 +116,7 @@ public class PipelineController {
         pipelineRegisters.EX_MEM.setMemRead(false);
         pipelineRegisters.EX_MEM.setMemWrite(false);
         pipelineRegisters.EX_MEM.setInstruction(null);
-        
+
         pipelineRegisters.MEM_WB.setAluResult(0);
         pipelineRegisters.MEM_WB.setMemData(0);
         pipelineRegisters.MEM_WB.setDestReg(-1);

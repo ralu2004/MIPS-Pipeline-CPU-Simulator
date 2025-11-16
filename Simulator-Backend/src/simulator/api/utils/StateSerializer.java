@@ -2,6 +2,9 @@ package simulator.api.utils;
 
 import model.cpu.CPUState;
 import model.instruction.Instruction;
+import model.instruction.ITypeInstruction;
+import model.instruction.JTypeInstruction;
+import model.instruction.RTypeInstruction;
 import model.pipeline.registers.*;
 import simulator.PipelineController;
 
@@ -92,8 +95,89 @@ public class StateSerializer {
 		sb.append('{');
 		sb.append("\"hex\":\"0x").append(String.format("%08X", instr.getBinary())).append('"');
 		sb.append(",\"opcode\":").append(instr.getOpcode());
+		String assembly = instructionToAssembly(instr);
+		if (assembly != null) {
+			sb.append(",\"assembly\":\"").append(escapeJson(assembly)).append('"');
+		}
 		sb.append('}');
 		return sb.toString();
+	}
+
+	private static String instructionToAssembly(Instruction instr) {
+		if (instr == null) return null;
+		
+		// Ensure fields are decoded
+		instr.decodeFields();
+		
+		if (instr instanceof RTypeInstruction) {
+			RTypeInstruction r = (RTypeInstruction) instr;
+			return rTypeToAssembly(r);
+		} else if (instr instanceof ITypeInstruction) {
+			ITypeInstruction i = (ITypeInstruction) instr;
+			return iTypeToAssembly(i);
+		} else if (instr instanceof JTypeInstruction) {
+			JTypeInstruction j = (JTypeInstruction) instr;
+			return jTypeToAssembly(j);
+		}
+		return null;
+	}
+
+	private static String rTypeToAssembly(RTypeInstruction r) {
+		int func = r.getFunc();
+		String[] regNames = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
+			"$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
+			"$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+			"$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
+		
+		switch (func) {
+			case 0x20: return "add " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x22: return "sub " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x24: return "and " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x25: return "or " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x2A: return "slt " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x08: return "jr " + regNames[r.getRs()];
+			default: return "R-type (func: 0x" + Integer.toHexString(func) + ")";
+		}
+	}
+
+	private static String iTypeToAssembly(ITypeInstruction i) {
+		String[] regNames = {"$zero", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
+			"$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
+			"$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+			"$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
+		
+		int opcode = i.getOpcode();
+		int imm = i.getImmediate();
+		
+		switch (opcode) {
+			case 0x08: return "addi " + regNames[i.getRt()] + ", " + regNames[i.getRs()] + ", " + imm;
+			case 0x0C: return "andi " + regNames[i.getRt()] + ", " + regNames[i.getRs()] + ", " + imm;
+			case 0x0D: return "ori " + regNames[i.getRt()] + ", " + regNames[i.getRs()] + ", " + imm;
+			case 0x0A: return "slti " + regNames[i.getRt()] + ", " + regNames[i.getRs()] + ", " + imm;
+			case 0x23: return "lw " + regNames[i.getRt()] + ", " + imm + "(" + regNames[i.getRs()] + ")";
+			case 0x2B: return "sw " + regNames[i.getRt()] + ", " + imm + "(" + regNames[i.getRs()] + ")";
+			case 0x04: return "beq " + regNames[i.getRs()] + ", " + regNames[i.getRt()] + ", " + imm;
+			case 0x05: return "bne " + regNames[i.getRs()] + ", " + regNames[i.getRt()] + ", " + imm;
+			default: return "I-type (op: 0x" + Integer.toHexString(opcode) + ")";
+		}
+	}
+
+	private static String jTypeToAssembly(JTypeInstruction j) {
+		int opcode = j.getOpcode();
+		int address = j.getAddress();
+		int target = address << 2;
+		
+		if (opcode == 0x02) {
+			return "j 0x" + Integer.toHexString(target).toUpperCase();
+		} else if (opcode == 0x03) {
+			return "jal 0x" + Integer.toHexString(target).toUpperCase();
+		}
+		return "J-type (op: 0x" + Integer.toHexString(opcode) + ")";
+	}
+
+	private static String escapeJson(String s) {
+		if (s == null) return "";
+		return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
 	}
 
 	private static String serializeDataMemory(CPUState state) {

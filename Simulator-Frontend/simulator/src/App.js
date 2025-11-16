@@ -3,7 +3,6 @@ import { Play, Pause, RotateCcw, Upload, Cpu, AlertCircle, CheckCircle, StepForw
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:85';
 
-// MIPS register names
 const REGISTER_NAMES = [
   '$zero', '$at', '$v0', '$v1', '$a0', '$a1', '$a2', '$a3',
   '$t0', '$t1', '$t2', '$t3', '$t4', '$t5', '$t6', '$t7',
@@ -11,7 +10,6 @@ const REGISTER_NAMES = [
   '$t8', '$t9', '$k0', '$k1', '$gp', '$sp', '$fp', '$ra'
 ];
 
-// Sample MIPS programs with hex and assembly
 const SAMPLE_PROGRAMS = {
   'Simple ADD': {
     code: '00221820\n00832022\n00a42824\n00c53025',
@@ -35,7 +33,6 @@ const SAMPLE_PROGRAMS = {
   }
 };
 
-// Register descriptions for tooltips
 const REGISTER_INFO = {
   '$zero': 'Constant value 0 (read-only)',
   '$at': 'Assembler temporary',
@@ -71,7 +68,6 @@ const REGISTER_INFO = {
   '$ra': 'Return address'
 };
 
-// Pipeline stage descriptions
 const STAGE_INFO = {
   'IF': 'Instruction Fetch: Fetches the next instruction from memory using the Program Counter',
   'ID': 'Instruction Decode: Decodes the instruction and reads register operands',
@@ -150,22 +146,11 @@ export default function MIPSSimulator() {
   const reset = async () => {
     setIsLoading(true);
     try {
-      // Clear local state immediately for visual feedback
-      setCpuState(null);
-      
+      setCpuState(null); 
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
       
-      // Small delay to ensure backend has processed the reset
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Fetch fresh state from backend - force a clean fetch
-      const stateRes = await fetch(`${API_BASE}/api/state`);
-      if (stateRes.ok) {
-        const data = await stateRes.json();
-        setCpuState(data);
-      }
-      
+      await fetchState();
       setCustomCode('');
       setSelectedProgram('');
       setShowProgramLoader(true);
@@ -173,7 +158,6 @@ export default function MIPSSimulator() {
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Reset failed' });
-      // Still try to fetch state even if reset had issues
       await fetchState();
     } finally {
       setIsLoading(false);
@@ -483,6 +467,11 @@ function PipelineVisualization({ pipeline }) {
                   <div className="font-mono text-sm text-slate-300">
                     {stageData.instruction.hex}
                   </div>
+                  {stageData.instruction.assembly && (
+                    <div className="text-xs text-green-400 font-semibold">
+                      ({stageData.instruction.assembly})
+                    </div>
+                  )}
                   {stageData.pc !== undefined && stageData.pc !== null && (
                     <div className="text-xs text-slate-400">PC: {stageData.pc}</div>
                   )}
