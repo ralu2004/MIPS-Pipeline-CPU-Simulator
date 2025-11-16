@@ -1,70 +1,111 @@
-# Getting Started with Create React App
+# MIPS Pipeline Simulator - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React + Tailwind CSS frontend for the MIPS Pipeline Simulator.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- 🎨 Beautiful, modern UI with Tailwind CSS
+- 🔄 Real-time pipeline visualization
+- 💾 Register and memory display
+- ⚡ Step-by-step and auto-execution modes
+- 📚 Sample programs included
+- ✏️ Custom program loading
+- 📊 Detailed pipeline stage information
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Node.js (v14 or higher)
+- npm or yarn
+- Backend API server running on port 8080 (default)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Installation
 
-### `npm test`
+1. Navigate to the frontend directory:
+```bash
+cd Simulator-Frontend/simulator
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+2. Install dependencies:
+```bash
+npm install
+```
 
-### `npm run build`
+## Configuration
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The frontend connects to the backend API at `http://localhost:8080` by default.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+To change the API URL, create a `.env` file in the `simulator` directory:
+```
+REACT_APP_API_BASE=http://localhost:8080
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Running the Application
 
-### `npm run eject`
+1. Make sure the backend API server is running (see backend README)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. Start the React development server:
+```bash
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Building for Production
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+To create a production build:
 
-## Learn More
+```bash
+npm run build
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The build folder will contain the optimized production build.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Project Structure
 
-### Code Splitting
+```
+simulator/
+├── public/          # Static files
+├── src/
+│   ├── App.js       # Main application component
+│   ├── index.js     # React entry point
+│   └── index.css    # Global styles with Tailwind
+├── package.json     # Dependencies and scripts
+└── tailwind.config.js  # Tailwind CSS configuration
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Usage
 
-### Analyzing the Bundle Size
+1. **Load a Program**: Select a sample program or enter custom hex instructions
+2. **Step Execution**: Use "Step 1 Cycle" or "Step 5 Cycles" to advance execution
+3. **Auto Run**: Click "Run Auto" to continuously execute cycles
+4. **View State**: The pipeline, registers, and memory update automatically
+5. **Reset**: Click "Reset All" to clear the simulator state
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## API Endpoints Used
 
-### Making a Progressive Web App
+- `POST /api/load?start=0` - Load program into instruction memory
+- `POST /api/step?cycles=N` - Execute N clock cycles
+- `GET /api/state` - Get current CPU and pipeline state
+- `POST /api/reset?clearRegs=1&clearMem=1&pc=0` - Reset simulator
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Technologies
 
-### Advanced Configuration
+- **React 19** - UI framework
+- **Tailwind CSS 3** - Styling
+- **Lucide React** - Icons
+- **Fetch API** - HTTP requests
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Troubleshooting
 
-### Deployment
+### Cannot connect to server
+- Ensure the backend API server is running on port 8080
+- Check that CORS is enabled on the backend
+- Verify the API_BASE URL in `.env` matches your backend
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Build errors
+- Delete `node_modules` and `package-lock.json`, then run `npm install` again
+- Ensure Node.js version is 14 or higher
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Styling issues
+- Make sure Tailwind CSS is properly configured
+- Check that `tailwind.config.js` includes the correct content paths
