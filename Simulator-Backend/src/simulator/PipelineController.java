@@ -5,6 +5,10 @@ import model.cpu.CPUState;
 import model.pipeline.registers.MEM_WB_Register;
 import model.pipeline.registers.PipelineRegisters;
 import model.pipeline.stages.*;
+import model.pipeline.state.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PipelineController {
 
@@ -17,6 +21,14 @@ public class PipelineController {
     private final ExecuteStage execute = new ExecuteStage();
     private final MemoryStage memory = new MemoryStage();
     private final WriteBackStage writeBack = new WriteBackStage();
+
+    private final List<PipelineSnapshot> history = new ArrayList<>();
+    private boolean branchFlushedThisCycle = false;
+    private String lastWbInstr = null;
+
+    public List<PipelineSnapshot> getHistory() {
+        return history;
+    }
 
     public PipelineController(CPUState state) {
         this.cpuState = state;
@@ -47,6 +59,8 @@ public class PipelineController {
         if (stallControl.pcWrite) {
             fetch.process(cpuState, pipelineRegisters);
         }
+
+        saveSnapshot();
     }
 
     private MEM_WB_Register saveMEM_WB(MEM_WB_Register original) {
@@ -69,6 +83,7 @@ public class PipelineController {
 
     private void handleControlHazards() {
         if (pipelineRegisters.EX_MEM.isBranch() && pipelineRegisters.EX_MEM.isBranchTaken()) {
+            branchFlushedThisCycle = true;
             pipelineRegisters.IF_ID.set(null, 0);
             clearID_EX();
         }
@@ -97,9 +112,6 @@ public class PipelineController {
         return pipelineRegisters;
     }
 
-    /**
-     * Clears all pipeline registers - used when resetting the simulator
-     */
     public void clearPipeline() {
         pipelineRegisters.IF_ID.set(null, 0);
         clearID_EX();
@@ -124,4 +136,79 @@ public class PipelineController {
         pipelineRegisters.MEM_WB.setMemToReg(false);
         pipelineRegisters.MEM_WB.setInstruction(null);
     }
+
+    private void saveSnapshot() {
+
+        StallUnit.StallControl stall = stallUnit.getStallControl();
+
+        StageInfo ifInfo;
+        StageInfo idInfo;
+        StageInfo exInfo;
+        StageInfo memInfo;
+        StageInfo wbInfo;
+
+        if (branchFlushedThisCycle) {
+            ifInfo = new StageInfo(StageState.FLUSH, null);
+        } else if (!stall.pcWrite) {
+            ifInfo = new StageInfo(StageState.STALL, null);
+        } else if (pipelineRegisters.IF_ID.getInstruction() == null) {
+            ifInfo = new StageInfo(StageState.EMPTY, null);
+        } else {
+            ifInfo = new StageInfo(
+                    StageState.INSTR,
+                    pipelineRegisters.IF_ID.getInstruction().toString()
+            );
+        }
+
+        if (branchFlushedThisCycle) {
+            idInfo = new StageInfo(StageState.FLUSH, null);
+        } else if (!stall.ifidWrite) {
+            idInfo = new StageInfo(StageState.STALL, null);
+        } else if (pipelineRegisters.ID_EX.getInstruction() == null) {
+            idInfo = new StageInfo(StageState.EMPTY, null);
+        } else {
+            idInfo = new StageInfo(
+                    StageState.INSTR,
+                    pipelineRegisters.ID_EX.getInstruction().toString()
+            );
+        }
+
+        if (stall.idExClear) {
+            exInfo = new StageInfo(StageState.BUBBLE, null);
+        } else if (pipelineRegisters.EX_MEM.getInstruction() == null) {
+            exInfo = new StageInfo(StageState.EMPTY, null);
+        } else {
+            exInfo = new StageInfo(
+                    StageState.INSTR,
+                    pipelineRegisters.EX_MEM.getInstruction().toString()
+            );
+        }
+
+        if (pipelineRegisters.MEM_WB.getInstruction() == null) {
+            memInfo = new StageInfo(StageState.EMPTY, null);
+        } else {
+            memInfo = new StageInfo(
+                    StageState.INSTR,
+                    pipelineRegisters.MEM_WB.getInstruction().toString()
+            );
+        }
+
+        if (lastWbInstr == null) {
+            wbInfo = new StageInfo(StageState.EMPTY, null);
+        } else {
+            wbInfo = new StageInfo(StageState.INSTR, lastWbInstr);
+        }
+
+        if (pipelineRegisters.MEM_WB.getInstruction() != null) {
+            lastWbInstr = pipelineRegisters.MEM_WB.getInstruction().toString();
+        } else {
+            lastWbInstr = null;
+        }
+
+        PipelineSnapshot snapshot = new PipelineSnapshot(ifInfo, idInfo, exInfo, memInfo, wbInfo);
+
+        history.add(snapshot);
+        branchFlushedThisCycle = false;
+    }
+
 }

@@ -6,6 +6,7 @@ import model.instruction.ITypeInstruction;
 import model.instruction.JTypeInstruction;
 import model.instruction.RTypeInstruction;
 import model.pipeline.registers.*;
+import model.pipeline.state.*;
 import simulator.PipelineController;
 
 public class StateSerializer {
@@ -17,6 +18,7 @@ public class StateSerializer {
 		sb.append("\"registers\":").append(serializeRegisters(state)).append(',');
 		sb.append("\"pipeline\":").append(serializePipeline(controller)).append(',');
 		sb.append("\"dataMemory\":").append(serializeDataMemory(state));
+		sb.append(",\"pipelineHistory\":").append(serializeHistory(controller));
 		sb.append("}");
 		return sb.toString();
 	}
@@ -87,6 +89,39 @@ public class StateSerializer {
 		return sb.toString();
 	}
 
+	private static String serializeHistory(PipelineController controller) {
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+
+		var history = controller.getHistory();
+		for (int i = 0; i < history.size(); i++) {
+			if (i > 0) sb.append(',');
+			PipelineSnapshot snap = history.get(i);
+
+			sb.append('{');
+			sb.append("\"IF\":").append(stageInfoToJson(snap.getIfStage())).append(',');
+			sb.append("\"ID\":").append(stageInfoToJson(snap.getIdStage())).append(',');
+			sb.append("\"EX\":").append(stageInfoToJson(snap.getExStage())).append(',');
+			sb.append("\"MEM\":").append(stageInfoToJson(snap.getMemStage())).append(',');
+			sb.append("\"WB\":").append(stageInfoToJson(snap.getWbStage()));
+			sb.append('}');
+		}
+
+		sb.append(']');
+		return sb.toString();
+	}
+
+	private static String stageInfoToJson(StageInfo info) {
+		if (info == null) return "null";
+
+		return "{"
+				+ "\"state\":\"" + info.getState() + "\","
+				+ "\"instruction\":" + (info.getInstruction() == null
+				? "null"
+				: "\"" + escapeJson(info.getInstruction()) + "\"")
+				+ "}";
+	}
+
 	private static String instrToJson(Instruction instr) {
 		if (instr == null) {
 			return "null";
@@ -105,8 +140,7 @@ public class StateSerializer {
 
 	private static String instructionToAssembly(Instruction instr) {
 		if (instr == null) return null;
-		
-		// Ensure fields are decoded
+
 		instr.decodeFields();
 		
 		if (instr instanceof RTypeInstruction) {
