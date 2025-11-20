@@ -84,14 +84,24 @@ export default function MIPSSimulator() {
   const [message, setMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showProgramLoader, setShowProgramLoader] = useState(true);
+  const [pipelineView, setPipelineView] = useState('detailed'); 
+  const [executionHistory, setExecutionHistory] = useState([]);
 
-  // API Functions
+
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/state`);
       if (!res.ok) throw new Error('Failed to fetch state');
       const data = await res.json();
       setCpuState(data);
+      
+      if (data.pipeline) {
+        setExecutionHistory(prev => [...prev, {
+          cycle: prev.length,
+          pipeline: data.pipeline
+        }]);
+      }
+      
       return true;
     } catch (err) {
       setMessage({ type: 'error', text: `Cannot connect to server at ${API_BASE}. Make sure the backend is running.` });
@@ -114,6 +124,7 @@ export default function MIPSSimulator() {
       }
       
       const result = await res.json();
+      setExecutionHistory([]); 
       await fetchState();
       setMessage({ 
         type: 'success', 
@@ -146,11 +157,14 @@ export default function MIPSSimulator() {
   const reset = async () => {
     setIsLoading(true);
     try {
-      setCpuState(null); 
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
       
+      setCpuState(null);
+      setExecutionHistory([]);
+      
       await fetchState();
+      
       setCustomCode('');
       setSelectedProgram('');
       setShowProgramLoader(true);
@@ -158,16 +172,12 @@ export default function MIPSSimulator() {
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Reset failed' });
-      await fetchState();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Effects
-  useEffect(() => {
-    fetchState();
-  }, [fetchState]);
+  useEffect(() => {}, [fetchState]);
 
   useEffect(() => {
     if (isRunning) {
@@ -357,8 +367,48 @@ export default function MIPSSimulator() {
           {/* Pipeline Stages - Takes up more space */}
           <div className="lg:col-span-6">
             <Card title="🔄 Pipeline Stages">
+              {/* View Toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setPipelineView('detailed')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
+                    pipelineView === 'detailed'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  📋 Detailed
+                </button>
+                <button
+                  onClick={() => setPipelineView('diagram')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
+                    pipelineView === 'diagram'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  📊 Diagram
+                </button>
+                <button
+                  onClick={() => setPipelineView('gantt')}
+                  className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
+                    pipelineView === 'gantt'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  📈 Timeline
+                </button>
+              </div>
+
               {cpuState?.pipeline ? (
-                <PipelineVisualization pipeline={cpuState.pipeline} />
+                pipelineView === 'detailed' ? (
+                  <PipelineVisualization pipeline={cpuState.pipeline} />
+                ) : pipelineView === 'diagram' ? (
+                  <PipelineDiagram pipeline={cpuState.pipeline} />
+                ) : (
+                  <PipelineGantt history={executionHistory} />
+                )
               ) : (
                 <EmptyState text="No pipeline data available" />
               )}
@@ -391,7 +441,6 @@ export default function MIPSSimulator() {
   );
 }
 
-// Reusable Components
 function Card({ title, children }) {
   return (
     <div className="bg-slate-800/50 backdrop-blur rounded-xl p-6 border border-slate-700 shadow-lg">
@@ -406,27 +455,9 @@ function PipelineVisualization({ pipeline }) {
     { name: 'IF', key: 'IF_ID', label: 'Instruction Fetch' },
     { name: 'ID', key: 'ID_EX', label: 'Instruction Decode' },
     { name: 'EX', key: 'EX_MEM', label: 'Execute' },
-    { name: 'MEM', key: 'EX_MEM', label: 'Memory Access', isMEM: true },
-    { name: 'WB', key: 'MEM_WB', label: 'Write Back', isWB: true }
+    { name: 'MEM', key: 'MEM_WB', label: 'Memory Access' },
+    { name: 'WB', key: 'MEM_WB', label: 'Write Back' }
   ];
-
-  // Check if pipeline is actually empty (all stages have no instructions)
-  const isPipelineEmpty = !pipeline || stages.every(stage => {
-    const stageData = pipeline[stage.key];
-    return !stageData?.instruction || 
-           stageData.instruction === null || 
-           !stageData.instruction.hex || 
-           stageData.instruction.hex === 'null';
-  });
-
-  if (isPipelineEmpty) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-slate-400 text-sm mb-2">Pipeline is empty</div>
-        <div className="text-slate-500 text-xs">Load a program and step through execution to see instructions flow through the pipeline</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -435,8 +466,7 @@ function PipelineVisualization({ pipeline }) {
         const hasInstruction = stageData?.instruction && 
           stageData.instruction !== null && 
           stageData.instruction.hex && 
-          stageData.instruction.hex !== 'null' &&
-          stageData.instruction.hex !== '0x00000000';
+          stageData.instruction.hex !== 'null';
         
         return (
           <div key={stage.name} className="relative group">
@@ -467,29 +497,13 @@ function PipelineVisualization({ pipeline }) {
                   <div className="font-mono text-sm text-slate-300">
                     {stageData.instruction.hex}
                   </div>
-                  {stageData.instruction.assembly && (
-                    <div className="text-xs text-green-400 font-semibold">
-                      ({stageData.instruction.assembly})
-                    </div>
-                  )}
-                  {stageData.pc !== undefined && stageData.pc !== null && (
+                  {stageData.pc !== undefined && (
                     <div className="text-xs text-slate-400">PC: {stageData.pc}</div>
                   )}
-                  {stageData.aluResult !== undefined && stageData.aluResult !== null && (
-                    <div className="text-xs text-amber-300">ALU: {stageData.aluResult}</div>
-                  )}
-                  {stageData.destReg !== undefined && stageData.destReg !== null && stageData.destReg >= 0 && (
+                  {stageData.destReg !== undefined && stageData.destReg >= 0 && (
                     <div className="text-xs text-purple-300">
-                      Dest: {REGISTER_NAMES[stageData.destReg] || `$${stageData.destReg}`}
+                      Dest: {REGISTER_NAMES[stageData.destReg] || `${stageData.destReg}`}
                     </div>
-                  )}
-                  {stageData.branchTaken !== undefined && stageData.branchTaken !== null && (
-                    <div className={`text-xs ${stageData.branchTaken ? 'text-red-400' : 'text-slate-400'}`}>
-                      Branch: {stageData.branchTaken ? '✓ TAKEN' : '✗ NOT TAKEN'}
-                    </div>
-                  )}
-                  {stage.isWB && stageData.writeData !== undefined && stageData.writeData !== null && (
-                    <div className="text-xs text-green-300">Write: {stageData.writeData}</div>
                   )}
                 </div>
               ) : (
@@ -543,7 +557,6 @@ function RegisterDisplay({ name, value, index }) {
         0x{value.toString(16).toUpperCase().padStart(8, '0')}
       </div>
       
-      {/* Tooltip on hover */}
       <div className="absolute left-0 top-full mt-2 w-48 bg-slate-800 border border-purple-500 rounded-lg p-2 text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl">
         <div className="font-bold text-purple-400 mb-1">{name}</div>
         {info}
@@ -553,7 +566,6 @@ function RegisterDisplay({ name, value, index }) {
 }
 
 function MemoryGrid({ memory }) {
-  // Handle both array and object formats
   const memoryEntries = Array.isArray(memory)
     ? memory.map((value, addr) => ({ addr, value })).filter(e => e.value !== 0)
     : Object.entries(memory).map(([addr, value]) => ({ 
@@ -586,6 +598,281 @@ function EmptyState({ text }) {
   return (
     <div className="text-center text-slate-400 py-8 text-sm">
       {text}
+    </div>
+  );
+}
+
+function PipelineGantt({ history }) {
+  if (!history || history.length === 0) {
+    return (
+      <div className="bg-slate-900 rounded-lg p-6 text-center text-slate-400 text-sm">
+        Timeline will appear as you step through execution
+      </div>
+    );
+  }
+
+  const stages = ['IF', 'ID', 'EX', 'MEM', 'WB'];
+  const stageKeys = ['IF_ID', 'ID_EX', 'EX_MEM', 'EX_MEM', 'MEM_WB'];
+
+  return (
+    <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-purple-300">📊 Pipeline Gantt Chart</h3>
+        <span className="text-xs text-slate-400">{history.length} cycles</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-slate-800">
+              <th className="border border-slate-700 p-2 text-left text-purple-400 font-bold">Cycle</th>
+              {stages.map(stage => (
+                <th key={stage} className="border border-slate-700 p-2 text-center font-bold text-purple-400">
+                  {stage}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {history.map((snapshot, cycleIdx) => (
+              <tr key={cycleIdx} className="hover:bg-slate-800/50">
+                <td className="border border-slate-700 p-2 font-mono font-bold text-white bg-slate-800">
+                  {snapshot.cycle}
+                </td>
+                {stages.map((stage, stageIdx) => {
+                  const stageKey = stageKeys[stageIdx];
+                  const stageData = snapshot.pipeline[stageKey];
+                  
+                  const hasInstruction = stageData?.instruction?.hex && 
+                    stageData.instruction.hex !== 'null' &&
+                    stageData.instruction.hex !== '0x00000000';
+
+                  let cellClass = 'border border-slate-700 p-2 text-center font-mono';
+                  let cellContent = '';
+                  let bgColor = '';
+
+                  if (!hasInstruction) {
+                    // BUBBLE
+                    cellClass += ' text-purple-300';
+                    cellContent = 'BUBBLE';
+                    bgColor = '#7c3aed';
+                  } else if (stageData.branchTaken) {
+                    // FLUSH
+                    cellClass += ' text-white font-bold';
+                    cellContent = 'FLUSH';
+                    bgColor = '#ef4444'; 
+                  } else {
+                    // INSTRUCTION
+                    cellClass += ' text-white';
+                    cellContent = stageData.instruction.assembly?.split(' ')[0] || 'INSTR';
+                    bgColor = '#3b82f6'; 
+                  }
+
+                  return (
+                    <td
+                      key={stage}
+                      className={cellClass}
+                      style={{ backgroundColor: bgColor }}
+                      title={hasInstruction ? stageData.instruction.assembly : 'Bubble'}
+                    >
+                      {cellContent}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 flex flex-wrap gap-4 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+          <span className="text-slate-300">Instruction</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: '#7c3aed' }}></div>
+          <span className="text-slate-300">Bubble</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+          <span className="text-slate-300">Flush (Branch)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
+          <span className="text-slate-300">Stall (if detected)</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PipelineDiagram({ pipeline }) {
+  const stages = [
+    { name: 'IF', key: 'IF_ID', color: 'bg-blue-500' },
+    { name: 'ID', key: 'ID_EX', color: 'bg-green-500' },
+    { name: 'EX', key: 'EX_MEM', color: 'bg-yellow-500' },
+    { name: 'MEM', key: 'EX_MEM', color: 'bg-orange-500' },
+    { name: 'WB', key: 'MEM_WB', color: 'bg-purple-500' }
+  ];
+
+  return (
+    <div className="bg-slate-900 rounded-lg p-6">
+      {/* Horizontal Pipeline Stages */}
+      <div className="flex items-center justify-between mb-8">
+        {stages.map((stage, index) => {
+          const stageData = pipeline[stage.key];
+          const hasInstruction = stageData?.instruction?.hex && 
+            stageData.instruction.hex !== 'null' &&
+            stageData.instruction.hex !== '0x00000000';
+          
+          return (
+            <React.Fragment key={stage.name}>
+              {/* Stage Box */}
+              <div className="relative group flex-1">
+                <div className={`${stage.color} ${hasInstruction ? 'opacity-100' : 'opacity-30'} rounded-lg p-4 text-center transition-all`}>
+                  <div className="font-bold text-white text-xl mb-2">{stage.name}</div>
+                  {hasInstruction ? (
+                    <div className="text-xs text-white/90 font-mono">
+                      {stageData.instruction.hex?.substring(0, 10)}...
+                    </div>
+                  ) : (
+                    <div className="text-xs text-white/60">Empty</div>
+                  )}
+                </div>
+                
+                {/* Tooltip with details */}
+                {hasInstruction && (
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-slate-800 border-2 border-purple-500 rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 shadow-2xl">
+                    <div className="text-xs space-y-1">
+                      <div className="font-bold text-purple-400">Instruction:</div>
+                      <div className="font-mono text-white">{stageData.instruction.hex}</div>
+                      {stageData.instruction.assembly && (
+                        <>
+                          <div className="font-bold text-green-400 mt-2">Assembly:</div>
+                          <div className="font-mono text-white">{stageData.instruction.assembly}</div>
+                        </>
+                      )}
+                      {stageData.pc !== undefined && (
+                        <div className="text-slate-300">PC: {stageData.pc}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Arrow between stages */}
+              {index < stages.length - 1 && (
+                <div className="flex items-center justify-center px-2">
+                  <div className="text-purple-400 text-2xl">→</div>
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Data Flow Visualization */}
+      <div className="space-y-4 mt-8">
+        <div className="text-sm font-semibold text-purple-300 mb-2">Data Path:</div>
+        
+        {/* Register File */}
+        <div className="flex items-center gap-4">
+          <div className="bg-pink-900/30 border border-pink-500 rounded p-3 flex-1">
+            <div className="text-xs font-bold text-pink-400 mb-1">Register File</div>
+            <div className="text-xs text-slate-300">
+              {pipeline.ID_EX?.rs !== undefined && (
+                <span>Reading: {REGISTER_NAMES[pipeline.ID_EX.rs]}, {REGISTER_NAMES[pipeline.ID_EX.rt]}</span>
+              )}
+              {pipeline.MEM_WB?.regWrite && pipeline.MEM_WB?.destReg >= 0 && (
+                <span className="text-green-400 ml-2">
+                  Writing: {REGISTER_NAMES[pipeline.MEM_WB.destReg]}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* ALU */}
+          <div className="bg-yellow-900/30 border border-yellow-500 rounded p-3 flex-1">
+            <div className="text-xs font-bold text-yellow-400 mb-1">ALU</div>
+            <div className="text-xs text-slate-300">
+              {pipeline.EX_MEM?.aluResult !== undefined ? (
+                <span>Result: {pipeline.EX_MEM.aluResult}</span>
+              ) : (
+                <span className="text-slate-500">Idle</span>
+              )}
+            </div>
+          </div>
+          
+          {/* Memory */}
+          <div className="bg-orange-900/30 border border-orange-500 rounded p-3 flex-1">
+            <div className="text-xs font-bold text-orange-400 mb-1">Data Memory</div>
+            <div className="text-xs text-slate-300">
+              {pipeline.EX_MEM?.memRead && <span className="text-blue-400">Reading...</span>}
+              {pipeline.EX_MEM?.memWrite && <span className="text-red-400">Writing...</span>}
+              {!pipeline.EX_MEM?.memRead && !pipeline.EX_MEM?.memWrite && (
+                <span className="text-slate-500">Idle</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Control Signals */}
+        <div className="bg-slate-800/50 border border-slate-600 rounded p-3">
+          <div className="text-xs font-bold text-purple-400 mb-2">Active Control Signals:</div>
+          <div className="flex flex-wrap gap-2">
+            {pipeline.ID_EX?.regWrite && (
+              <span className="px-2 py-1 bg-green-600 rounded text-xs">RegWrite</span>
+            )}
+            {pipeline.EX_MEM?.memRead && (
+              <span className="px-2 py-1 bg-blue-600 rounded text-xs">MemRead</span>
+            )}
+            {pipeline.EX_MEM?.memWrite && (
+              <span className="px-2 py-1 bg-red-600 rounded text-xs">MemWrite</span>
+            )}
+            {pipeline.EX_MEM?.branch && (
+              <span className="px-2 py-1 bg-yellow-600 rounded text-xs">Branch</span>
+            )}
+            {pipeline.EX_MEM?.branchTaken && (
+              <span className="px-2 py-1 bg-orange-600 rounded text-xs animate-pulse">Branch Taken!</span>
+            )}
+            {pipeline.MEM_WB?.memToReg && (
+              <span className="px-2 py-1 bg-purple-600 rounded text-xs">MemToReg</span>
+            )}
+            {!pipeline.ID_EX?.regWrite && !pipeline.EX_MEM?.memRead && !pipeline.EX_MEM?.memWrite && (
+              <span className="px-2 py-1 bg-slate-600 rounded text-xs text-slate-400">No active signals</span>
+            )}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="bg-slate-800/30 rounded p-3 mt-4">
+          <div className="text-xs font-bold text-slate-400 mb-2">Color Legend:</div>
+          <div className="grid grid-cols-5 gap-2 text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span>IF</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <span>ID</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+              <span>EX</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-orange-500 rounded"></div>
+              <span>MEM</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-purple-500 rounded"></div>
+              <span>WB</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

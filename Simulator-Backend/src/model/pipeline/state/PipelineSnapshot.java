@@ -8,11 +8,7 @@ public class PipelineSnapshot {
     private final StageInfo memStage;
     private final StageInfo wbStage;
 
-    public PipelineSnapshot(StageInfo ifStage,
-                            StageInfo idStage,
-                            StageInfo exStage,
-                            StageInfo memStage,
-                            StageInfo wbStage) {
+    public PipelineSnapshot(StageInfo ifStage, StageInfo idStage, StageInfo exStage, StageInfo memStage, StageInfo wbStage) {
         this.ifStage = ifStage;
         this.idStage = idStage;
         this.exStage = exStage;

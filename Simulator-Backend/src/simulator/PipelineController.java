@@ -154,9 +154,7 @@ public class PipelineController {
         } else if (pipelineRegisters.IF_ID.getInstruction() == null) {
             ifInfo = new StageInfo(StageState.EMPTY, null);
         } else {
-            ifInfo = new StageInfo(
-                    StageState.INSTR,
-                    pipelineRegisters.IF_ID.getInstruction().toString()
+            ifInfo = new StageInfo(StageState.INSTR, pipelineRegisters.IF_ID.getInstruction().toString()
             );
         }
 
@@ -167,9 +165,7 @@ public class PipelineController {
         } else if (pipelineRegisters.ID_EX.getInstruction() == null) {
             idInfo = new StageInfo(StageState.EMPTY, null);
         } else {
-            idInfo = new StageInfo(
-                    StageState.INSTR,
-                    pipelineRegisters.ID_EX.getInstruction().toString()
+            idInfo = new StageInfo(StageState.INSTR, pipelineRegisters.ID_EX.getInstruction().toString()
             );
         }
 
@@ -178,18 +174,14 @@ public class PipelineController {
         } else if (pipelineRegisters.EX_MEM.getInstruction() == null) {
             exInfo = new StageInfo(StageState.EMPTY, null);
         } else {
-            exInfo = new StageInfo(
-                    StageState.INSTR,
-                    pipelineRegisters.EX_MEM.getInstruction().toString()
+            exInfo = new StageInfo(StageState.INSTR, pipelineRegisters.EX_MEM.getInstruction().toString()
             );
         }
 
         if (pipelineRegisters.MEM_WB.getInstruction() == null) {
             memInfo = new StageInfo(StageState.EMPTY, null);
         } else {
-            memInfo = new StageInfo(
-                    StageState.INSTR,
-                    pipelineRegisters.MEM_WB.getInstruction().toString()
+            memInfo = new StageInfo(StageState.INSTR, pipelineRegisters.MEM_WB.getInstruction().toString()
             );
         }
 
