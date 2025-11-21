@@ -142,10 +142,8 @@ export default function MIPSSimulator() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       
-      {/* FIXED CONTROL BAR */}
       <div className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-lg border-b-2 border-purple-500/30 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
             <div className="flex items-center gap-3">
               <Cpu className="w-8 h-8 text-purple-400" />
@@ -157,7 +155,6 @@ export default function MIPSSimulator() {
               </div>
             </div>
 
-            {/* Program Counter Display */}
             {cpuState && (
               <div className="flex items-center gap-4 bg-slate-800/80 rounded-lg px-4 py-2 border border-purple-500/30">
                 <div className="text-center">
@@ -173,7 +170,6 @@ export default function MIPSSimulator() {
             )}
           </div>
 
-          {/* Control Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => step(1)}
@@ -231,8 +227,7 @@ export default function MIPSSimulator() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        {/* Status Message */}
+  
         {message && (
           <div className={`mb-6 p-4 rounded-lg border-2 flex items-center gap-2 animate-fade-in ${
             message.type === 'error' 
@@ -244,11 +239,10 @@ export default function MIPSSimulator() {
           </div>
         )}
 
-        {/* COLLAPSIBLE PROGRAM LOADER */}
         {showProgramLoader && (
           <div className="mb-6 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Sample Programs */}
+           
               <Card title="📚 Sample Programs">
                 <div className="space-y-2">
                   {Object.keys(SAMPLE_PROGRAMS).map((name) => (
@@ -276,7 +270,6 @@ export default function MIPSSimulator() {
                 </div>
               </Card>
 
-              {/* Custom Program */}
               <Card title="✏️ Custom Program">
                 <textarea
                   value={customCode}
@@ -298,13 +291,9 @@ export default function MIPSSimulator() {
           </div>
         )}
 
-        {/* SIMULATION VIEW */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Pipeline Stages - Takes up more space */}
           <div className="lg:col-span-6">
             <Card title="🔄 Pipeline Stages">
-              {/* View Toggle */}
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => setPipelineView('detailed')}
@@ -352,9 +341,7 @@ export default function MIPSSimulator() {
             </Card>
           </div>
 
-          {/* Registers and Memory */}
           <div className="lg:col-span-6 space-y-6">
-            {/* Registers */}
             <Card title="💾 Registers">
               {cpuState?.registers ? (
                 <RegisterGrid registers={cpuState.registers} />
@@ -363,7 +350,6 @@ export default function MIPSSimulator() {
               )}
             </Card>
 
-            {/* Data Memory */}
             <Card title="📦 Data Memory">
               {cpuState?.dataMemory ? (
                 <MemoryGrid memory={cpuState.dataMemory} />

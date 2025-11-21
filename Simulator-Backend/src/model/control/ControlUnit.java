@@ -31,8 +31,20 @@ public class ControlUnit {
                 aluOp = 2;      
                 jump = false;
                 break;
+
+            case 0x08: // addi
+                regWrite = true;
+                regDst = false;
+                aluSrc = true;
+                memToReg = false;
+                branch = false;
+                memRead = false;
+                memWrite = false;
+                aluOp = 0;
+                jump = false;
+                break;
                 
-            case 0x23: // lw (load word)
+            case 0x23: // lw
                 regWrite = true;
                 regDst = false;
                 aluSrc = true;
@@ -44,7 +56,7 @@ public class ControlUnit {
                 jump = false;
                 break;
                 
-            case 0x2B: // sw (store word)
+            case 0x2B: // sw
                 regWrite = false;
                 regDst = false;
                 aluSrc = true;
@@ -56,7 +68,7 @@ public class ControlUnit {
                 jump = false;
                 break;
                 
-            case 0x04: // beq (branch if equal)
+            case 0x04: // beq
                 regWrite = false;
                 regDst = false; 
                 aluSrc = false;
@@ -67,19 +79,55 @@ public class ControlUnit {
                 aluOp = 1;      // ALU does subtraction (for comparison)
                 jump = false;
                 break;
-                
-            case 0x08: // addi
-                regWrite = true;
+
+            case 0x05: //bne
+                regWrite = false;
                 regDst = false;
+                aluSrc = false;
+                memToReg = false;
+                branch = true;
+                memRead = false;
+                memWrite = false;
+                aluOp = 1;
+                jump = false;
+                break;
+
+            case 0x0D: //ori
+                regWrite = true;
+                regDst = true;
                 aluSrc = true;
                 memToReg = false;
                 branch = false;
                 memRead = false;
                 memWrite = false;
-                aluOp = 0;      
+                aluOp = 3;
                 jump = false;
                 break;
-                
+
+            case 0x0C: //andi
+                regWrite = true;
+                regDst = true;
+                aluSrc = true;
+                memToReg = false;
+                branch = false;
+                memRead = false;
+                memWrite = false;
+                aluOp = 4;
+                jump = false;
+                break;
+
+            case 0x0A: //slti
+                regWrite = true;
+                regDst = true;
+                aluSrc = true;
+                memToReg = false;
+                branch = false;
+                memRead = false;
+                memWrite = false;
+                aluOp = 5;
+                jump = false;
+                break;
+
             case 0x02: // j (jump)
             case 0x03: // jal (jump and link)
                 regWrite = (opcode == 0x03); // jal writes to $ra

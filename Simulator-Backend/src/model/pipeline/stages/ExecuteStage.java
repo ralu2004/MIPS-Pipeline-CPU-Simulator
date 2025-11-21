@@ -78,6 +78,12 @@ public class ExecuteStage implements PipelineStage {
                 default: throw new UnsupportedOperationException(
                         "Unsupported R-type function: 0x" + Integer.toHexString(func));
             }
+        } else if (aluOp == 3) {
+            aluResult = aluInputA | aluInputB;
+        } else if (aluOp == 4) {
+            aluResult = aluInputA & aluInputB;
+        } else if (aluOp == 5) {
+            aluResult = (aluInputA < aluInputB) ? 1 : 0;
         }
 
         int destReg = regs.ID_EX.isRegDst() ? regs.ID_EX.getRd() : regs.ID_EX.getRt();
