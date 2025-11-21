@@ -65,7 +65,7 @@ export default function MIPSSimulator() {
       await fetchState();
       setMessage({ 
         type: 'success', 
-        text: `✓ Program loaded: ${result.loaded} instruction(s)` 
+        text: `Program loaded: ${result.loaded} instruction(s)` 
       });
       setTimeout(() => setMessage(null), 3000);
       setShowProgramLoader(false); 
@@ -76,20 +76,20 @@ export default function MIPSSimulator() {
     }
   };
 
-  const step = async (cycles = 1) => {
+  const step = useCallback(async (cycles = 1) => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/step?cycles=${cycles}`, { method: 'POST' });
       if (!res.ok) throw new Error('Step failed');
       await fetchState();
-      setMessage({ type: 'success', text: `✓ Executed ${cycles} cycle(s)` });
+      setMessage({ type: 'success', text: `Executed ${cycles} cycle(s)` });
       setTimeout(() => setMessage(null), 1500);
     } catch (err) {
       setMessage({ type: 'error', text: 'Execution failed' });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchState]);
 
   const reset = async () => {
     setIsLoading(true);
@@ -105,7 +105,7 @@ export default function MIPSSimulator() {
       setCustomCode('');
       setSelectedProgram('');
       setShowProgramLoader(true);
-      setMessage({ type: 'success', text: '✓ Simulator reset' });
+      setMessage({ type: 'success', text: 'Simulator reset' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Reset failed' });
@@ -121,7 +121,7 @@ export default function MIPSSimulator() {
       const interval = setInterval(() => step(1), 500);
       return () => clearInterval(interval);
     }
-  }, [isRunning]);
+  }, [isRunning, step]);
 
   const handleLoadSample = (programName) => {
     setSelectedProgram(programName);
@@ -377,12 +377,3 @@ export default function MIPSSimulator() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
