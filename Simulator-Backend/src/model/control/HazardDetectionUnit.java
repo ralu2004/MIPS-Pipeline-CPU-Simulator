@@ -7,28 +7,28 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HazardDetectionUnit {
-    
+
     private final List<String> detectedHazards = new ArrayList<>();
 
     public HazardReport checkAllHazards(PipelineRegisters regs) {
         detectedHazards.clear();
-        
+
         checkDataHazards(regs);
         checkControlHazards(regs);
         checkStructuralHazards(regs);
-        
+
         return new HazardReport(new ArrayList<>(detectedHazards));
     }
 
     private void checkDataHazards(PipelineRegisters regs) {
-       
+
         if (regs.IF_ID.getInstruction() == null) {
-            return; 
+            return;
         }
-        
+
         int idRs = 0, idRt = 0;
         regs.IF_ID.getInstruction().decodeFields();
-     
+
         if (regs.IF_ID.getInstruction() instanceof RTypeInstruction) {
             RTypeInstruction rInstr = (RTypeInstruction) regs.IF_ID.getInstruction();
             idRs = rInstr.getRs();
@@ -77,11 +77,11 @@ public class HazardDetectionUnit {
     }
 
     private void checkStructuralHazards(PipelineRegisters regs) {
-        
+
         if (regs.EX_MEM.isRegWrite() && regs.MEM_WB.isRegWrite()) {
             int exMemDest = regs.EX_MEM.getDestReg();
             int memWbDest = regs.MEM_WB.getDestReg();
-            
+
             if (exMemDest != 0 && exMemDest == memWbDest) {
                 detectedHazards.add("STRUCTURAL_HAZARD: Multiple writes to same register detected");
             }
@@ -92,14 +92,14 @@ public class HazardDetectionUnit {
         if (regs.ID_EX.getInstruction() == null || !regs.ID_EX.isMemRead()) {
             return false;
         }
-      
+
         if (regs.IF_ID.getInstruction() == null) {
             return false;
         }
-        
+
         regs.IF_ID.getInstruction().decodeFields();
         int idRs = 0, idRt = 0;
-        
+
         if (regs.IF_ID.getInstruction() instanceof RTypeInstruction) {
             RTypeInstruction rInstr = (RTypeInstruction) regs.IF_ID.getInstruction();
             idRs = rInstr.getRs();
@@ -109,30 +109,30 @@ public class HazardDetectionUnit {
             idRs = iInstr.getRs();
             idRt = iInstr.getRt();
         }
-        
+
         int exRt = regs.ID_EX.getRt();
         return (idRs == exRt || idRt == exRt);
     }
 
     public static class HazardReport {
         private final List<String> hazards;
-        
+
         public HazardReport(List<String> hazards) {
             this.hazards = hazards;
         }
-        
+
         public boolean hasHazards() {
             return !hazards.isEmpty();
         }
-        
+
         public List<String> getHazards() {
             return hazards;
         }
-        
+
         public boolean hasLoadUseHazard() {
             return hazards.stream().anyMatch(h -> h.contains("LOAD_USE_HAZARD"));
         }
-        
+
         public boolean hasControlHazard() {
             return hazards.stream().anyMatch(h -> h.contains("CONTROL_HAZARD"));
         }

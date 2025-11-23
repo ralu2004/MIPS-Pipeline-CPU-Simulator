@@ -12,7 +12,6 @@ import {SAMPLE_PROGRAMS} from './components/Constants';
 
 const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:85';
 
-
 export default function MIPSSimulator() {
   const [cpuState, setCpuState] = useState(null);
   const [customCode, setCustomCode] = useState('');
@@ -24,15 +23,19 @@ export default function MIPSSimulator() {
   const [pipelineView, setPipelineView] = useState('detailed'); 
   const [executionHistory, setExecutionHistory] = useState([]);
 
-
   const fetchState = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/state`);
       if (!res.ok) throw new Error('Failed to fetch state');
       const data = await res.json();
+      
       setCpuState(data);
       
-      if (data.pipeline) {
+      // Use the backend's pipelineHistory if available, otherwise fallback to manual history
+      if (data.pipelineHistory) {
+        setExecutionHistory(data.pipelineHistory);
+      } else {
+        // Fallback: build history manually (less accurate)
         setExecutionHistory(prev => [...prev, {
           cycle: prev.length,
           pipeline: data.pipeline
@@ -96,15 +99,16 @@ export default function MIPSSimulator() {
     try {
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
-      
+ 
       setCpuState(null);
       setExecutionHistory([]);
-      
-      await fetchState();
-      
       setCustomCode('');
       setSelectedProgram('');
       setShowProgramLoader(true);
+      
+      await new Promise(resolve => setTimeout(resolve, 50)); 
+      await fetchState();
+      
       setMessage({ type: 'success', text: 'Simulator reset' });
       setTimeout(() => setMessage(null), 2000);
     } catch (err) {
@@ -114,7 +118,9 @@ export default function MIPSSimulator() {
     }
   };
 
-  useEffect(() => {}, [fetchState]);
+  useEffect(() => {
+    fetchState();
+  }, [fetchState]);
 
   useEffect(() => {
     if (isRunning) {

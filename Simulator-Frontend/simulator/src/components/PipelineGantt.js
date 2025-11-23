@@ -10,13 +10,40 @@ export default function PipelineGantt({ history }) {
   }
 
   const stages = ['IF', 'ID', 'EX', 'MEM', 'WB'];
-  const stageKeys = ['IF_ID', 'ID_EX', 'EX_MEM', 'EX_MEM', 'MEM_WB'];
+  const maxCycles = history.length;
+
+  // Helper function to extract instruction mnemonic
+  const getInstructionMnemonic = (instructionStr) => {
+    if (!instructionStr) return '';
+    
+    if (instructionStr.includes('RTypeInstruction')) {
+      const funcMatch = instructionStr.match(/func=(\d+)/);
+      if (funcMatch) {
+        const func = parseInt(funcMatch[1]);
+        switch(func) {
+          case 32: return 'add';
+          case 34: return 'sub';
+          case 36: return 'and';
+          case 37: return 'or';
+          case 42: return 'slt';
+          case 8: return 'jr';
+          default: return `R${func}`;
+        }
+      }
+    } else if (instructionStr.includes('ITypeInstruction')) {
+      if (instructionStr.includes('immediate=2')) return 'beq';
+      if (instructionStr.includes('immediate=4')) return 'beq';
+      return 'I-type';
+    }
+    
+    return 'INSTR';
+  };
 
   return (
     <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-purple-300">📊 Pipeline Gantt Chart</h3>
-        <span className="text-xs text-slate-400">{history.length} cycles</span>
+        <span className="text-xs text-slate-400">{maxCycles} cycles</span>
       </div>
 
       <div className="overflow-x-auto">
@@ -35,35 +62,50 @@ export default function PipelineGantt({ history }) {
             {history.map((snapshot, cycleIdx) => (
               <tr key={cycleIdx} className="hover:bg-slate-800/50">
                 <td className="border border-slate-700 p-2 font-mono font-bold text-white bg-slate-800">
-                  {snapshot.cycle}
+                  {cycleIdx + 1}
                 </td>
-                {stages.map((stage, stageIdx) => {
-                  const stageKey = stageKeys[stageIdx];
-                  const stageData = snapshot.pipeline[stageKey];
+                {stages.map(stage => {
+                  const stageInfo = snapshot[stage];
                   
-                  const hasInstruction = stageData?.instruction?.hex && 
-                    stageData.instruction.hex !== 'null' &&
-                    stageData.instruction.hex !== '0x00000000';
-
                   let cellClass = 'border border-slate-700 p-2 text-center font-mono';
                   let cellContent = '';
                   let bgColor = '';
+                  let title = '';
 
-                  if (!hasInstruction) {
+                  if (!stageInfo) {
+                    // Empty/No data
+                    cellContent = 'EMPTY';
+                    bgColor = '#1e293b';
+                    title = 'Empty';
+                  } else if (stageInfo.state === 'INSTR' && stageInfo.instruction) {
+                    // INSTRUCTION
+                    cellClass += ' text-white font-semibold';
+                    cellContent = getInstructionMnemonic(stageInfo.instruction);
+                    bgColor = '#3b82f6';
+                    title = `Instruction: ${cellContent}`;
+                  } else if (stageInfo.state === 'STALL') {
+                    // STALL
+                    cellClass += ' text-white font-bold';
+                    cellContent = 'STALL';
+                    bgColor = '#f59e0b';
+                    title = 'Stall';
+                  } else if (stageInfo.state === 'BUBBLE') {
                     // BUBBLE
                     cellClass += ' text-purple-300';
                     cellContent = 'BUBBLE';
                     bgColor = '#7c3aed';
-                  } else if (stageData.branchTaken) {
+                    title = 'Bubble';
+                  } else if (stageInfo.state === 'FLUSH') {
                     // FLUSH
                     cellClass += ' text-white font-bold';
                     cellContent = 'FLUSH';
-                    bgColor = '#ef4444'; 
+                    bgColor = '#ef4444';
+                    title = 'Flush';
                   } else {
-                    // INSTRUCTION
-                    cellClass += ' text-white';
-                    cellContent = stageData.instruction.assembly?.split(' ')[0] || 'INSTR';
-                    bgColor = '#3b82f6'; 
+                    // Unknown state
+                    cellContent = stageInfo.state || 'EMPTY';
+                    bgColor = '#1e293b';
+                    title = stageInfo.state || 'Empty';
                   }
 
                   return (
@@ -71,7 +113,7 @@ export default function PipelineGantt({ history }) {
                       key={stage}
                       className={cellClass}
                       style={{ backgroundColor: bgColor }}
-                      title={hasInstruction ? stageData.instruction.assembly : 'Bubble'}
+                      title={title}
                     >
                       {cellContent}
                     </td>
@@ -81,6 +123,10 @@ export default function PipelineGantt({ history }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 text-xs text-slate-400">
+        <p>Each row shows the pipeline state for a single cycle across all stages</p>
       </div>
 
       {/* Legend */}
@@ -95,11 +141,11 @@ export default function PipelineGantt({ history }) {
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-          <span className="text-slate-300">Flush (Branch)</span>
+          <span className="text-slate-300">Flush</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-6 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
-          <span className="text-slate-300">Stall (if detected)</span>
+          <span className="text-slate-300">Stall</span>
         </div>
       </div>
     </div>

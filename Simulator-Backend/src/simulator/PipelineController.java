@@ -137,6 +137,12 @@ public class PipelineController {
         pipelineRegisters.MEM_WB.setInstruction(null);
     }
 
+    public void clearHistory() {
+        history.clear();
+        branchFlushedThisCycle = false;
+        lastWbInstr = null;
+    }
+
     private void saveSnapshot() {
 
         StallUnit.StallControl stall = stallUnit.getStallControl();
