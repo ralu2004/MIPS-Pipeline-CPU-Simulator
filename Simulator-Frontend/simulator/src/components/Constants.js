@@ -1,7 +1,7 @@
 export const SAMPLE_PROGRAMS = {
   'Simple ADD': {
-    code: '00221820\n00832022\n00a42824\n00c53025',
-    assembly: 'add $3, $1, $2\nadd $4, $4, $3\nand $5, $5, $4\nor $6, $6, $5',
+    code: '20080005\n21090003\n01095020',
+    assembly: 'addi $t0, $zero, 5\naddi $t1, $t0, 3\nadd $t2, $t0, $t1',
     description: 'Basic arithmetic operations'
   },
   'Memory Operations': {

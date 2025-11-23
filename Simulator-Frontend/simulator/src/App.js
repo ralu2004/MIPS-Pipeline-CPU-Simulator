@@ -31,11 +31,9 @@ export default function MIPSSimulator() {
       
       setCpuState(data);
       
-      // Use the backend's pipelineHistory if available, otherwise fallback to manual history
-      if (data.pipelineHistory) {
+      if (data.pipelineHistory) { 
         setExecutionHistory(data.pipelineHistory);
       } else {
-        // Fallback: build history manually (less accurate)
         setExecutionHistory(prev => [...prev, {
           cycle: prev.length,
           pipeline: data.pipeline

@@ -114,12 +114,12 @@ public class StateSerializer {
 	private static String stageInfoToJson(StageInfo info) {
 		if (info == null) return "null";
 
-		return "{"
-				+ "\"state\":\"" + info.getState() + "\","
-				+ "\"instruction\":" + (info.getInstruction() == null
-				? "null"
-				: "\"" + escapeJson(info.getInstruction()) + "\"")
-				+ "}";
+		StringBuilder sb = new StringBuilder();
+		sb.append('{');
+		sb.append("\"state\":\"").append(info.getState()).append('"');
+		sb.append(",\"instruction\":").append(instrToJson(info.getInstruction()));
+		sb.append('}');
+		return sb.toString();
 	}
 
 	private static String instrToJson(Instruction instr) {

@@ -13,8 +13,19 @@ export default function PipelineGantt({ history }) {
   const maxCycles = history.length;
 
   // Helper function to extract instruction mnemonic
-  const getInstructionMnemonic = (instructionStr) => {
-    if (!instructionStr) return '';
+  const getInstructionMnemonic = (stageInfo) => {
+    if (!stageInfo || !stageInfo.instruction) return '';
+    
+    const instr = stageInfo.instruction;
+    
+    // If we have the enhanced instruction object with assembly
+    if (instr && typeof instr === 'object' && instr.assembly) {
+      // Extract just the mnemonic (first word) from assembly
+      return instr.assembly.split(' ')[0];
+    }
+    
+    // Fallback to old string parsing
+    const instructionStr = stageInfo.instructionStr || JSON.stringify(instr);
     
     if (instructionStr.includes('RTypeInstruction')) {
       const funcMatch = instructionStr.match(/func=(\d+)/);
@@ -80,9 +91,11 @@ export default function PipelineGantt({ history }) {
                   } else if (stageInfo.state === 'INSTR' && stageInfo.instruction) {
                     // INSTRUCTION
                     cellClass += ' text-white font-semibold';
-                    cellContent = getInstructionMnemonic(stageInfo.instruction);
+                    cellContent = getInstructionMnemonic(stageInfo);
                     bgColor = '#3b82f6';
-                    title = `Instruction: ${cellContent}`;
+                    
+                    const fullAssembly = stageInfo.instruction?.assembly;
+                    title = fullAssembly ? `Instruction: ${fullAssembly}` : `Instruction: ${cellContent}`;
                   } else if (stageInfo.state === 'STALL') {
                     // STALL
                     cellClass += ' text-white font-bold';
@@ -129,7 +142,6 @@ export default function PipelineGantt({ history }) {
         <p>Each row shows the pipeline state for a single cycle across all stages</p>
       </div>
 
-      {/* Legend */}
       <div className="mt-4 flex flex-wrap gap-4 text-xs">
         <div className="flex items-center gap-2">
           <div className="w-6 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
