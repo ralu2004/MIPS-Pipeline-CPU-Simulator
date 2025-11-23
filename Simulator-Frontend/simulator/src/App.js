@@ -47,35 +47,39 @@ export default function MIPSSimulator() {
     }
   }, []);
 
-  const loadProgram = async (code) => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/load?start=0`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: code
-      });
-      
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to load program');
-      }
-      
-      const result = await res.json();
-      setExecutionHistory([]); 
-      await fetchState();
-      setMessage({ 
-        type: 'success', 
-        text: `Program loaded: ${result.loaded} instruction(s)` 
-      });
-      setTimeout(() => setMessage(null), 3000);
-      setShowProgramLoader(false); 
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Failed to load program' });
-    } finally {
-      setIsLoading(false);
+ const loadProgram = async (code) => {
+  setIsLoading(true);
+  try {
+    // Reset first to clear everything
+    await reset();
+    
+    // Now load the new program
+    const res = await fetch(`${API_BASE}/api/load?start=0`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: code
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to load program');
     }
-  };
+    
+    const result = await res.json();
+    await fetchState();
+    
+    setMessage({ 
+      type: 'success', 
+      text: `Program loaded: ${result.loaded} instruction(s)` 
+    });
+    setTimeout(() => setMessage(null), 3000);
+    setShowProgramLoader(false); 
+  } catch (err) {
+    setMessage({ type: 'error', text: err.message || 'Failed to load program' });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const step = useCallback(async (cycles = 1) => {
     setIsLoading(true);
@@ -92,27 +96,27 @@ export default function MIPSSimulator() {
     }
   }, [fetchState]);
 
-  const reset = async () => {
-    setIsLoading(true);
+  const reset = async (showLoader = true) => {
     try {
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
- 
+
       setCpuState(null);
       setExecutionHistory([]);
       setCustomCode('');
       setSelectedProgram('');
-      setShowProgramLoader(true);
+      if (showLoader) setShowProgramLoader(true);
       
       await new Promise(resolve => setTimeout(resolve, 50)); 
       await fetchState();
       
-      setMessage({ type: 'success', text: 'Simulator reset' });
-      setTimeout(() => setMessage(null), 2000);
+      if (showLoader) {
+        setMessage({ type: 'success', text: 'Simulator reset' });
+        setTimeout(() => setMessage(null), 2000);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Reset failed' });
-    } finally {
-      setIsLoading(false);
+      throw err; 
     }
   };
 
