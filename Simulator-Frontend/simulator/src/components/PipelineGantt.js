@@ -12,19 +12,15 @@ export default function PipelineGantt({ history }) {
   const stages = ['IF', 'ID', 'EX', 'MEM', 'WB'];
   const maxCycles = history.length;
 
-  // Helper function to extract instruction mnemonic
   const getInstructionMnemonic = (stageInfo) => {
     if (!stageInfo || !stageInfo.instruction) return '';
     
     const instr = stageInfo.instruction;
     
-    // If we have the enhanced instruction object with assembly
     if (instr && typeof instr === 'object' && instr.assembly) {
-      // Extract just the mnemonic (first word) from assembly
       return instr.assembly.split(' ')[0];
     }
     
-    // Fallback to old string parsing
     const instructionStr = stageInfo.instructionStr || JSON.stringify(instr);
     
     if (instructionStr.includes('RTypeInstruction')) {
@@ -115,7 +111,6 @@ export default function PipelineGantt({ history }) {
                     bgColor = '#ef4444';
                     title = 'Flush';
                   } else {
-                    // Unknown state
                     cellContent = stageInfo.state || 'EMPTY';
                     bgColor = '#1e293b';
                     title = stageInfo.state || 'Empty';

@@ -2,12 +2,23 @@ import React from 'react';
 import { REGISTER_NAMES } from './Constants';
 
 export default function PipelineDiagram({ pipeline }) {
+
+  // Virtual stage views (so each stage highlights independently)
+  const stageDataView = {
+    IF:  pipeline.IF_ID ?? {},
+    ID:  pipeline.ID_EX ?? {},
+    EX:  pipeline.EX_MEM ?? {},
+    MEM: pipeline.MEM_WB ?? {},
+    WB:  pipeline.MEM_WB ?? {}   // or: {}
+  };
+
+  // UI stage definitions (each stage now has its own unique key)
   const stages = [
-    { name: 'IF', key: 'IF_ID', color: 'bg-blue-500' },
-    { name: 'ID', key: 'ID_EX', color: 'bg-green-500' },
-    { name: 'EX', key: 'EX_MEM', color: 'bg-yellow-500' },
-    { name: 'MEM', key: 'EX_MEM', color: 'bg-orange-500' },
-    { name: 'WB', key: 'MEM_WB', color: 'bg-purple-500' }
+    { name: 'IF',  key: 'IF',  color: 'bg-blue-500' },
+    { name: 'ID',  key: 'ID',  color: 'bg-green-500' },
+    { name: 'EX',  key: 'EX',  color: 'bg-yellow-500' },
+    { name: 'MEM', key: 'MEM', color: 'bg-orange-500' },
+    { name: 'WB',  key: 'WB',  color: 'bg-purple-500' }
   ];
 
   return (
@@ -15,11 +26,13 @@ export default function PipelineDiagram({ pipeline }) {
       {/* Horizontal Pipeline Stages */}
       <div className="flex items-center justify-between mb-8">
         {stages.map((stage, index) => {
-          const stageData = pipeline[stage.key];
-          const hasInstruction = stageData?.instruction?.hex && 
+          const stageData = stageDataView[stage.key];
+
+          const hasInstruction =
+            stageData?.instruction?.hex &&
             stageData.instruction.hex !== 'null' &&
             stageData.instruction.hex !== '0x00000000';
-          
+
           return (
             <React.Fragment key={stage.name}>
               {/* Stage Box */}
@@ -28,25 +41,27 @@ export default function PipelineDiagram({ pipeline }) {
                   <div className="font-bold text-white text-xl mb-2">{stage.name}</div>
                   {hasInstruction ? (
                     <div className="text-xs text-white/90 font-mono">
-                      {stageData.instruction.hex?.substring(0, 10)}...
+                      {stageData.instruction.hex.substring(0, 10)}...
                     </div>
                   ) : (
                     <div className="text-xs text-white/60">Empty</div>
                   )}
                 </div>
-                
-                {/* Tooltip with details */}
+
+                {/* Tooltip */}
                 {hasInstruction && (
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-slate-800 border-2 border-purple-500 rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 shadow-2xl">
                     <div className="text-xs space-y-1">
                       <div className="font-bold text-purple-400">Instruction:</div>
                       <div className="font-mono text-white">{stageData.instruction.hex}</div>
+
                       {stageData.instruction.assembly && (
                         <>
                           <div className="font-bold text-green-400 mt-2">Assembly:</div>
                           <div className="font-mono text-white">{stageData.instruction.assembly}</div>
                         </>
                       )}
+
                       {stageData.pc !== undefined && (
                         <div className="text-slate-300">PC: {stageData.pc}</div>
                       )}
@@ -54,8 +69,8 @@ export default function PipelineDiagram({ pipeline }) {
                   </div>
                 )}
               </div>
-              
-              {/* Arrow between stages */}
+
+              {/* Arrow Between Stages */}
               {index < stages.length - 1 && (
                 <div className="flex items-center justify-center px-2">
                   <div className="text-purple-400 text-2xl">→</div>
@@ -66,10 +81,10 @@ export default function PipelineDiagram({ pipeline }) {
         })}
       </div>
 
-      {/* Data Flow Visualization */}
+      {/* Data Path Visualization */}
       <div className="space-y-4 mt-8">
         <div className="text-sm font-semibold text-purple-300 mb-2">Data Path:</div>
-        
+
         {/* Register File */}
         <div className="flex items-center gap-4">
           <div className="bg-pink-900/30 border border-pink-500 rounded p-3 flex-1">
@@ -85,7 +100,7 @@ export default function PipelineDiagram({ pipeline }) {
               )}
             </div>
           </div>
-          
+
           {/* ALU */}
           <div className="bg-yellow-900/30 border border-yellow-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-yellow-400 mb-1">ALU</div>
@@ -97,7 +112,7 @@ export default function PipelineDiagram({ pipeline }) {
               )}
             </div>
           </div>
-          
+
           {/* Memory */}
           <div className="bg-orange-900/30 border border-orange-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-orange-400 mb-1">Data Memory</div>

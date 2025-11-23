@@ -50,14 +50,18 @@ export default function MIPSSimulator() {
  const loadProgram = async (code) => {
   setIsLoading(true);
   try {
-    // Reset first to clear everything
     await reset();
-    
-    // Now load the new program
+
+    const cleanCode = code
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)   
+    .join('\n');
+
     const res = await fetch(`${API_BASE}/api/load?start=0`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: code
+      body: cleanCode
     });
     
     if (!res.ok) {
