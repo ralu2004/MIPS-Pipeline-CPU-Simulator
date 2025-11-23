@@ -1,10 +1,10 @@
 export default function MemoryGrid({ memory }) {
   const memoryEntries = Array.isArray(memory)
-    ? memory.map((value, addr) => ({ addr, value })).filter(e => e.value !== 0)
+    ? memory.map((value, addr) => ({ addr, value }))//.filter(e => e.value !== 0)
     : Object.entries(memory).map(([addr, value]) => ({ 
         addr: parseInt(addr), 
         value 
-      })).filter(e => e.value !== 0);
+      }));//.filter(e => e.value !== 0);
 
   if (memoryEntries.length === 0) {
     return <div className="text-slate-400 text-sm text-center py-4">No data in memory</div>;

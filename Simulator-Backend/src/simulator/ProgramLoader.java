@@ -7,24 +7,50 @@ import model.instruction.JTypeInstruction;
 import model.instruction.RTypeInstruction;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class ProgramLoader {
 
-	public static final int INSTRUCTION_MEMORY_WORDS = 1024; 
+	public static final int INSTRUCTION_MEMORY_WORDS = 1024;
 	public static final int INSTRUCTION_MEMORY_BYTES = INSTRUCTION_MEMORY_WORDS * 4;
+
+	public static ProgramLoadResult loadFromHexStrings(CPUState state, String[] hexLines, int startAddress) {
+		validateStartAddress(startAddress);
+
+		if (hexLines == null || hexLines.length == 0)
+			throw new IllegalArgumentException("No hex instructions to load");
+
+		String[] cleanLines = Arrays.stream(hexLines)
+				.map(String::trim)
+				.filter(s -> !s.isEmpty())
+				.toArray(String[]::new);
+
+		if (cleanLines.length == 0)
+			throw new IllegalArgumentException("No valid hex instructions after filtering");
+
+		int[] words = new int[cleanLines.length];
+		for (int i = 0; i < cleanLines.length; i++) {
+			words[i] = parseHexToInt(cleanLines[i]);
+		}
+
+		return loadFromIntArray(state, words, startAddress);
+	}
 
 	public static ProgramLoadResult loadFromIntArray(CPUState state, int[] words, int startAddress) {
 		validateStartAddress(startAddress);
-		if (words == null || words.length == 0) {
+
+		if (words == null || words.length == 0)
 			throw new IllegalArgumentException("No instructions to load");
-		}
+
+		clearInstructionMemory(state);
 
 		List<String> warnings = new ArrayList<>();
 		int loaded = 0;
 
 		for (int i = 0; i < words.length; i++) {
 			int address = startAddress + (i * 4);
+
 			if (address < 0 || address >= INSTRUCTION_MEMORY_BYTES) {
 				warnings.add("Skipping out-of-bounds instruction at address " + address);
 				continue;
@@ -36,20 +62,9 @@ public class ProgramLoader {
 		}
 
 		state.pc.set(startAddress);
-		return new ProgramLoadResult(loaded, startAddress, startAddress + (loaded > 0 ? (loaded - 1) * 4 : 0), warnings);
-	}
 
-	public static ProgramLoadResult loadFromHexStrings(CPUState state, String[] hexLines, int startAddress) {
-		validateStartAddress(startAddress);
-		if (hexLines == null || hexLines.length == 0) {
-			throw new IllegalArgumentException("No hex instructions to load");
-		}
-
-		int[] words = new int[hexLines.length];
-		for (int i = 0; i < hexLines.length; i++) {
-			words[i] = parseHexToInt(hexLines[i]);
-		}
-		return loadFromIntArray(state, words, startAddress);
+		int endAddress = startAddress + ((loaded > 0) ? (loaded - 1) * 4 : 0);
+		return new ProgramLoadResult(loaded, startAddress, endAddress, warnings);
 	}
 
 	public static void resetState(CPUState state, boolean clearRegisters, boolean clearDataMem, int pcStart) {
@@ -58,40 +73,54 @@ public class ProgramLoader {
 				state.registerFile.set(i, 0);
 			}
 		}
+
 		if (clearDataMem) {
 			for (int addr = 0; addr < state.dataMemory.sizeBytes(); addr += 4) {
 				state.dataMemory.storeWord(addr, 0);
 			}
 		}
+
+		clearInstructionMemory(state);
 		state.pc.set(pcStart);
 	}
 
-	private static void validateStartAddress(int startAddress) {
-		if ((startAddress & 0x3) != 0) {
-			throw new IllegalArgumentException("Start address must be word-aligned (multiple of 4)");
-		}
-		if (startAddress < 0 || startAddress >= INSTRUCTION_MEMORY_BYTES) {
-			throw new IllegalArgumentException("Start address out of instruction memory bounds");
+	private static void clearInstructionMemory(CPUState state) {
+		for (int addr = 0; addr < INSTRUCTION_MEMORY_BYTES; addr += 4) {
+			state.instructionMemory.setInstruction(addr, null);
 		}
 	}
 
+	private static void validateStartAddress(int startAddress) {
+		if ((startAddress & 0x3) != 0)
+			throw new IllegalArgumentException("Start address must be word-aligned (multiple of 4)");
+
+		if (startAddress < 0 || startAddress >= INSTRUCTION_MEMORY_BYTES)
+			throw new IllegalArgumentException("Start address out of instruction memory bounds");
+	}
+
 	private static int parseHexToInt(String hex) {
-		if (hex == null) throw new IllegalArgumentException("Null hex string");
+		if (hex == null)
+			throw new IllegalArgumentException("Null hex string");
+
 		String s = hex.trim();
-		if (s.startsWith("0x") || s.startsWith("0X")) s = s.substring(2);
-		if (s.isEmpty()) throw new IllegalArgumentException("Empty hex string");
-		return (int)Long.parseLong(s, 16);
+		if (s.startsWith("0x") || s.startsWith("0X"))
+			s = s.substring(2);
+
+		if (s.isEmpty())
+			throw new IllegalArgumentException("Empty hex string");
+
+		return (int) Long.parseLong(s, 16);
 	}
 
 	private static Instruction parseInstruction(int binaryWord) {
 		int opcode = (binaryWord >>> 26) & 0x3F;
-		if (opcode == 0x00) {
+
+		if (opcode == 0x00)
 			return new RTypeInstruction(opcode, binaryWord);
-		} else if (opcode == 0x02 || opcode == 0x03) {
+		else if (opcode == 0x02 || opcode == 0x03)
 			return new JTypeInstruction(opcode, binaryWord);
-		} else {
+		else
 			return new ITypeInstruction(opcode, binaryWord);
-		}
 	}
 
 	public static class ProgramLoadResult {

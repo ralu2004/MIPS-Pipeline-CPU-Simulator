@@ -214,7 +214,7 @@ public class StateSerializer {
 		return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
 	}
 
-	private static String serializeDataMemory(CPUState state) {
+	/*private static String serializeDataMemory(CPUState state) {
 		// serialize first 1KB
 		StringBuilder sb = new StringBuilder();
 		sb.append('{');
@@ -229,5 +229,20 @@ public class StateSerializer {
 		}
 		sb.append('}');
 		return sb.toString();
+	}*/
+	private static String serializeDataMemory(CPUState state) {
+		// serialize first 1KB
+		StringBuilder sb = new StringBuilder();
+		sb.append('{');
+		boolean first = true;
+		for (int addr = 0; addr < 1024; addr += 4) {
+			int value = state.dataMemory.loadWord(addr);
+			if (!first) sb.append(',');
+			sb.append('"').append(addr).append("\":").append(value);
+			first = false;
+		}
+		sb.append('}');
+		return sb.toString();
 	}
+
 }
