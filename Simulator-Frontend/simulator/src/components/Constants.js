@@ -5,19 +5,19 @@ export const SAMPLE_PROGRAMS = {
     description: 'Basic arithmetic operations'
   },
   'Memory Operations': {
-    code: '8c010000\n8c020004\n00221820\nac030008',
-    assembly: 'lw $1, 0($0)\nlw $2, 4($0)\nadd $3, $1, $2\nsw $3, 8($0)',
-    description: 'Load, compute, and store'
+    code: 'ac010000\nac020004\n8c010000\n8c020004\n00221820\nac030008',
+    assembly: 'sw $1, 0($0)\nsw $2, 4($0)\nlw $1, 0($0)\nlw $2, 4($0)\nadd $3, $1, $2\nsw $3, 8($0)',
+    description: 'Store values, then load, compute, and store result'
   },
   'Branch Test': {
-    code: '00221820\n10400002\n00832022\n00a42824',
-    assembly: 'add $3, $1, $2\nbeq $2, $0, 2\nadd $4, $4, $3\nand $5, $5, $4',
-    description: 'Conditional branching'
+    code: '20010005\n2002000a\n00221820\n10400002\n00832022\n00a42824',
+    assembly: 'addi $1, $0, 5\naddi $2, $0, 10\nadd $3, $1, $2\nbeq $2, $0, 2\nsub $4, $4, $3\nand $5, $5, $4',
+    description: 'Conditional branching with initialized values'
   },
   'Data Hazard Demo': {
-    code: '00221820\n00622020\n00832820\n00a33020',
-    assembly: 'add $3, $1, $2\nadd $4, $3, $2\nadd $5, $4, $3\nadd $6, $5, $3',
-    description: 'Back-to-back dependencies'
+    code: '20010003\n20020007\n00221820\n00622020\n00832820\n00a33020',
+    assembly: 'addi $1, $0, 3\naddi $2, $0, 7\nadd $3, $1, $2\nadd $4, $3, $2\nadd $5, $4, $3\nadd $6, $5, $3',
+    description: 'Back-to-back dependencies (3+7=10, cascading adds)'
   }
 };
 
