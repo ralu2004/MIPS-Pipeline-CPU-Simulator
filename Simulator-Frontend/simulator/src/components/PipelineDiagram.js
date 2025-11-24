@@ -3,11 +3,11 @@ import { REGISTER_NAMES } from './Constants';
 
 export default function PipelineDiagram({ pipeline, currentSnapshot }) {
   const stageDataView = currentSnapshot ? {
-    IF:  currentSnapshot.IF?.instruction ? { instruction: currentSnapshot.IF.instruction } : {},
-    ID:  currentSnapshot.ID?.instruction ? { instruction: currentSnapshot.ID.instruction } : {},
-    EX:  currentSnapshot.EX?.instruction ? { instruction: currentSnapshot.EX.instruction } : {},
-    MEM: currentSnapshot.MEM?.instruction ? { instruction: currentSnapshot.MEM.instruction } : {},
-    WB:  currentSnapshot.WB?.instruction ? { instruction: currentSnapshot.WB.instruction } : {}
+    IF:  currentSnapshot.IF ?? {},
+    ID:  currentSnapshot.ID ?? {},
+    EX:  currentSnapshot.EX ?? {},
+    MEM: currentSnapshot.MEM ?? {},
+    WB:  currentSnapshot.WB ?? {}
   } : {
     IF:  pipeline.IF_ID ?? {},
     ID:  pipeline.ID_EX ?? {},
@@ -23,6 +23,10 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
     { name: 'MEM', key: 'MEM', color: 'bg-orange-500' },
     { name: 'WB',  key: 'WB',  color: 'bg-purple-500' }
   ];
+
+  const getStageData = (stageKey) => {
+    return stageDataView[stageKey] || {};
+  };
 
   return (
     <div className="bg-slate-900 rounded-lg p-6">
@@ -106,12 +110,12 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
           <div className="bg-pink-900/30 border border-pink-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-pink-400 mb-1">Register File</div>
             <div className="text-xs text-slate-300">
-              {pipeline.ID_EX?.rs !== undefined && (
-                <span>Reading: {REGISTER_NAMES[pipeline.ID_EX.rs]}, {REGISTER_NAMES[pipeline.ID_EX.rt]}</span>
+              {getStageData('ID').rs !== undefined && (
+                <span>Reading: {REGISTER_NAMES[getStageData('ID').rs]}, {REGISTER_NAMES[getStageData('ID').rt]}</span>
               )}
-              {pipeline.MEM_WB?.regWrite && pipeline.MEM_WB?.destReg >= 0 && (
+              {getStageData('WB').regWrite && getStageData('WB').destReg >= 0 && (
                 <span className="text-green-400 ml-2">
-                  Writing: {REGISTER_NAMES[pipeline.MEM_WB.destReg]}
+                  Writing: {REGISTER_NAMES[getStageData('WB').destReg]}
                 </span>
               )}
             </div>
@@ -121,8 +125,8 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
           <div className="bg-yellow-900/30 border border-yellow-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-yellow-400 mb-1">ALU</div>
             <div className="text-xs text-slate-300">
-              {pipeline.EX_MEM?.aluResult !== undefined ? (
-                <span>Result: {pipeline.EX_MEM.aluResult}</span>
+              {getStageData('EX').aluResult !== undefined ? (
+                <span>Result: {getStageData('EX').aluResult}</span>
               ) : (
                 <span className="text-slate-500">Idle</span>
               )}
@@ -133,9 +137,9 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
           <div className="bg-orange-900/30 border border-orange-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-orange-400 mb-1">Data Memory</div>
             <div className="text-xs text-slate-300">
-              {pipeline.MEM_WB?.memRead && <span className="text-blue-400">Reading...</span>}
-              {pipeline.MEM_WB?.memWrite && <span className="text-red-400">Writing...</span>}
-              {!pipeline.MEM_WB?.memRead && !pipeline.MEM_WB?.memWrite && (
+              {getStageData('MEM').memRead && <span className="text-blue-400">Reading...</span>}
+              {getStageData('MEM').memWrite && <span className="text-red-400">Writing...</span>}
+              {!getStageData('MEM').memRead && !getStageData('MEM').memWrite && (
                 <span className="text-slate-500">Idle</span>
               )}
             </div>
@@ -146,25 +150,25 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         <div className="bg-slate-800/50 border border-slate-600 rounded p-3">
           <div className="text-xs font-bold text-purple-400 mb-2">Active Control Signals:</div>
           <div className="flex flex-wrap gap-2">
-            {pipeline.ID_EX?.regWrite && (
+            {getStageData('ID').regWrite && (
               <span className="px-2 py-1 bg-green-600 rounded text-xs">RegWrite</span>
             )}
-            {pipeline.EX_MEM?.memRead && (
+            {getStageData('EX').memRead && (
               <span className="px-2 py-1 bg-blue-600 rounded text-xs">MemRead</span>
             )}
-            {pipeline.EX_MEM?.memWrite && (
+            {getStageData('EX').memWrite && (
               <span className="px-2 py-1 bg-red-600 rounded text-xs">MemWrite</span>
             )}
-            {pipeline.EX_MEM?.branch && (
+            {getStageData('EX').branch && (
               <span className="px-2 py-1 bg-yellow-600 rounded text-xs">Branch</span>
             )}
-            {pipeline.EX_MEM?.branchTaken && (
+            {getStageData('EX').branchTaken && (
               <span className="px-2 py-1 bg-orange-600 rounded text-xs animate-pulse">Branch Taken!</span>
             )}
-            {pipeline.MEM_WB?.memToReg && (
+            {getStageData('WB').memToReg && (
               <span className="px-2 py-1 bg-purple-600 rounded text-xs">MemToReg</span>
             )}
-            {!pipeline.ID_EX?.regWrite && !pipeline.EX_MEM?.memRead && !pipeline.EX_MEM?.memWrite && (
+            {!getStageData('ID').regWrite && !getStageData('EX').memRead && !getStageData('EX').memWrite && (
               <span className="px-2 py-1 bg-slate-600 rounded text-xs text-slate-400">No active signals</span>
             )}
           </div>

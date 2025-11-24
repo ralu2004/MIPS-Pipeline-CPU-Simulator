@@ -2,12 +2,13 @@ import { STAGE_INFO, REGISTER_NAMES } from "./Constants";
 
 export default function PipelineVisualization({ pipeline, currentSnapshot }) {
 
+  // Now both modes have full stage data with pipeline registers
   const stageDataView = currentSnapshot ? {
-    IF:  currentSnapshot.IF?.instruction  ? { instruction: currentSnapshot.IF.instruction }  : {},
-    ID:  currentSnapshot.ID?.instruction  ? { instruction: currentSnapshot.ID.instruction }  : {},
-    EX:  currentSnapshot.EX?.instruction  ? { instruction: currentSnapshot.EX.instruction }  : {},
-    MEM: currentSnapshot.MEM?.instruction ? { instruction: currentSnapshot.MEM.instruction } : {},
-    WB:  currentSnapshot.WB?.instruction  ? { instruction: currentSnapshot.WB.instruction }  : {}
+    IF:  currentSnapshot.IF  ?? {},
+    ID:  currentSnapshot.ID  ?? {},
+    EX:  currentSnapshot.EX  ?? {},
+    MEM: currentSnapshot.MEM ?? {},
+    WB:  currentSnapshot.WB  ?? {}
   } : {
     IF:  pipeline.IF_ID  ?? {},
     ID:  pipeline.ID_EX  ?? {},
@@ -28,11 +29,6 @@ export default function PipelineVisualization({ pipeline, currentSnapshot }) {
     <div className="space-y-3">
       {stages.map((stage, index) => {
         const stageData = stageDataView[stage.key];
-        
-        // Get the actual pipeline data for signals
-        const pipelineStageData = currentSnapshot 
-          ? currentSnapshot[stage.key] 
-          : pipeline[`${stage.name}_${stages[index + 1]?.name || 'WB'}`];
 
         const hasInstruction =
           stageData?.instruction &&
@@ -57,7 +53,6 @@ export default function PipelineVisualization({ pipeline, currentSnapshot }) {
                     {stage.label}
                   </span>
 
-                  {/* Tooltip */}
                   <div className="absolute left-0 top-8 w-72 bg-slate-800 border border-purple-500 rounded-lg p-3 text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl">
                     <div className="font-bold text-purple-400 mb-1">
                       {stage.name} Stage
@@ -82,77 +77,114 @@ export default function PipelineVisualization({ pipeline, currentSnapshot }) {
                   </div>
 
                   {stageData.instruction.assembly && (
-                  <div className="font-mono text-xs text-green-300">
-                    {stageData.instruction.assembly}
-                  </div>)}
+                    <div className="font-mono text-xs text-green-300">
+                      {stageData.instruction.assembly}
+                    </div>
+                  )}
 
-                  {stage.name === "ID" && stageData.instruction && (
-                    <div className="mt-2 space-y-1 text-xs text-blue-300 font-mono">
-                      {stageData.instruction.opcode !== undefined && (
-                        <div>opcode: {stageData.instruction.opcode}</div>
-                      )}
-                      {stageData.instruction.rs !== undefined && (
-                        <div>
-                          rs: {stageData.instruction.rs}
-                          {REGISTER_NAMES[stageData.instruction.rs]
-                            ? ` (${REGISTER_NAMES[stageData.instruction.rs]})`
-                            : ""}
+                  {/* Stage-specific meaningful data */}
+                  {stage.name === "IF" && (
+                    <>
+                      {stageData.pc !== undefined && (
+                        <div className="text-xs text-slate-400">
+                          PC: {stageData.pc}
                         </div>
                       )}
-                      {stageData.instruction.rt !== undefined && (
-                        <div>
-                          rt: {stageData.instruction.rt}
-                          {REGISTER_NAMES[stageData.instruction.rt]
-                            ? ` (${REGISTER_NAMES[stageData.instruction.rt]})`
-                            : ""}
+                    </>
+                  )}
+
+                  {stage.name === "ID" && (
+                    <>
+                      {stageData.readData1 !== undefined && (
+                        <div className="text-xs text-blue-300">
+                          Read Data 1: {stageData.readData1}
                         </div>
                       )}
-                      {stageData.instruction.rd !== undefined && (
-                        <div>
-                          rd: {stageData.instruction.rd}
-                          {REGISTER_NAMES[stageData.instruction.rd]
-                            ? ` (${REGISTER_NAMES[stageData.instruction.rd]})`
-                            : ""}
+                      {stageData.readData2 !== undefined && (
+                        <div className="text-xs text-blue-300">
+                          Read Data 2: {stageData.readData2}
                         </div>
                       )}
-                      {stageData.instruction.immediate !== undefined && (
-                        <div>imm: {stageData.instruction.immediate}</div>
+                      {stageData.signExtImm !== undefined && (
+                        <div className="text-xs text-cyan-300">
+                          Imm: {stageData.signExtImm}
+                        </div>
                       )}
-                      {stageData.instruction.func !== undefined && (
-                      <>
-                        {stageData.instruction.shift !== undefined && (
-                          <div>shift amount: {stageData.instruction.shift}</div>
-                        )}
-                        <div>func: {stageData.instruction.func}</div>
-                      </>
-                    )}
-                    </div>
+                      {stageData.regWrite !== undefined && (
+                        <div className="text-xs text-green-300">
+                          RegWrite: {stageData.regWrite ? 'ON' : 'OFF'}
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {/* FIXED: Use pipelineStageData instead of stageData for signals */}
-                  {pipelineStageData?.pc !== undefined && (
-                    <div className="text-xs text-slate-400">
-                      PC: {pipelineStageData.pc}
-                    </div>
+                  {stage.name === "EX" && (
+                    <>
+                      {stageData.aluResult !== undefined && (
+                        <div className="text-xs text-orange-300">
+                          ALU Result: {stageData.aluResult}
+                        </div>
+                      )}
+                      {stageData.destReg !== undefined && stageData.destReg >= 0 && (
+                        <div className="text-xs text-purple-300">
+                          Dest: {REGISTER_NAMES[stageData.destReg] ?? stageData.destReg}
+                        </div>
+                      )}
+                      {stageData.zero !== undefined && (
+                        <div className="text-xs text-yellow-300">
+                          Zero: {stageData.zero ? 'true' : 'false'}
+                        </div>
+                      )}
+                      {stageData.branchTaken !== undefined && (
+                        <div className="text-xs text-red-300">
+                          Branch Taken: {stageData.branchTaken ? 'YES' : 'NO'}
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {pipelineStageData?.destReg !== undefined && (
-                    <div className="text-xs text-purple-300">
-                      Dest: {REGISTER_NAMES[pipelineStageData.destReg] ?? pipelineStageData.destReg}
-                    </div>
+                  {stage.name === "MEM" && (
+                    <>
+                      {stageData.aluResult !== undefined && (
+                        <div className="text-xs text-orange-300">
+                          ALU Result: {stageData.aluResult}
+                        </div>
+                      )}
+                      {stageData.memData !== undefined && (
+                        <div className="text-xs text-green-300">
+                          Mem Data: {stageData.memData}
+                        </div>
+                      )}
+                      {stageData.destReg !== undefined && stageData.destReg >= 0 && (
+                        <div className="text-xs text-purple-300">
+                          Dest: {REGISTER_NAMES[stageData.destReg] ?? stageData.destReg}
+                        </div>
+                      )}
+                      {stageData.memRead !== undefined && stageData.memRead && (
+                        <div className="text-xs text-blue-300">MemRead: ON</div>
+                      )}
+                      {stageData.memWrite !== undefined && stageData.memWrite && (
+                        <div className="text-xs text-red-300">MemWrite: ON</div>
+                      )}
+                    </>
                   )}
 
-                  {/* Add other signals like in PipelineDiagram */}
-                  {pipelineStageData?.aluResult !== undefined && (
-                    <div className="text-xs text-orange-300">
-                      ALU Result: {pipelineStageData.aluResult}
-                    </div>
-                  )}
-
-                  {pipelineStageData?.regWrite !== undefined && (
-                    <div className="text-xs text-green-300">
-                      RegWrite: {pipelineStageData.regWrite ? 'ON' : 'OFF'}
-                    </div>
+                  {stage.name === "WB" && (
+                    <>
+                      {stageData.destReg !== undefined && stageData.destReg >= 0 && (
+                        <div className="text-xs text-purple-300">
+                          Writing to: {REGISTER_NAMES[stageData.destReg] ?? stageData.destReg}
+                        </div>
+                      )}
+                      {stageData.regWrite !== undefined && stageData.regWrite && (
+                        <div className="text-xs text-green-300">RegWrite: ON</div>
+                      )}
+                      {stageData.memToReg !== undefined && (
+                        <div className="text-xs text-cyan-300">
+                          MemToReg: {stageData.memToReg ? 'ON' : 'OFF'}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ) : (
