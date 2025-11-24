@@ -11,6 +11,8 @@ public abstract class Instruction {
     }
 
     public abstract void decodeFields();
+    public abstract Instruction copy();
     public int getOpcode() { return opcode; }
     public int getBinary() { return binary; }
+
 }

@@ -16,6 +16,13 @@ public class JTypeInstruction extends Instruction {
         address = getBinary() & 0x03FFFFFF;
     }
 
+    @Override
+    public Instruction copy() {
+        JTypeInstruction c = new JTypeInstruction(getOpcode(), getBinary());
+        c.address = this.address;
+        return c;
+    }
+
     public int getAddress() { return address; }
 
     @Override

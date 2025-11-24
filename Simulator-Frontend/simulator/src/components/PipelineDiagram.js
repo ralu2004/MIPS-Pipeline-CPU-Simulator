@@ -1,18 +1,27 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { REGISTER_NAMES } from './Constants';
 
 export default function PipelineDiagram({ pipeline }) {
 
-  // Virtual stage views (so each stage highlights independently)
+  const prevMEMWB = useRef(null);
+
+// capture previous
+const last = prevMEMWB.current;
+
+// store new
+prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
+
   const stageDataView = {
     IF:  pipeline.IF_ID ?? {},
     ID:  pipeline.ID_EX ?? {},
     EX:  pipeline.EX_MEM ?? {},
     MEM: pipeline.MEM_WB ?? {},
-    WB:  pipeline.MEM_WB ?? {}   // or: {}
+    WB:  last ?? {} 
   };
 
-  // UI stage definitions (each stage now has its own unique key)
+  console.log("MEM_WB object ID:", pipeline.MEM_WB);
+  console.log("prev:", prevMEMWB.current);
+
   const stages = [
     { name: 'IF',  key: 'IF',  color: 'bg-blue-500' },
     { name: 'ID',  key: 'ID',  color: 'bg-green-500' },
@@ -23,7 +32,7 @@ export default function PipelineDiagram({ pipeline }) {
 
   return (
     <div className="bg-slate-900 rounded-lg p-6">
-      {/* Horizontal Pipeline Stages */}
+      
       <div className="flex items-center justify-between mb-8">
         {stages.map((stage, index) => {
           const stageData = stageDataView[stage.key];
@@ -35,13 +44,13 @@ export default function PipelineDiagram({ pipeline }) {
 
           return (
             <React.Fragment key={stage.name}>
-              {/* Stage Box */}
+              
               <div className="relative group flex-1">
                 <div className={`${stage.color} ${hasInstruction ? 'opacity-100' : 'opacity-30'} rounded-lg p-4 text-center transition-all`}>
                   <div className="font-bold text-white text-xl mb-2">{stage.name}</div>
                   {hasInstruction ? (
                     <div className="text-xs text-white/90 font-mono">
-                      {stageData.instruction.hex.substring(0, 10)}...
+                      {stageData.instruction.assembly.substring(0, 10)}...
                     </div>
                   ) : (
                     <div className="text-xs text-white/60">Empty</div>

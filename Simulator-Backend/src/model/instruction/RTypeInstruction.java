@@ -32,6 +32,17 @@ public class RTypeInstruction extends Instruction{
         this.func = func;
     }
 
+    @Override
+    public Instruction copy() {
+        RTypeInstruction c = new RTypeInstruction(getOpcode(), getBinary());
+        c.rs = this.rs;
+        c.rt = this.rt;
+        c.rd = this.rd;
+        c.shamt = this.shamt;
+        c.func = this.func;
+        return c;
+    }
+
     public int getRs() { return rs; }
     public int getRt() { return rt; }
     public int getRd() { return rd; }

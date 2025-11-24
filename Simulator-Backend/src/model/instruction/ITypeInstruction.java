@@ -22,6 +22,15 @@ public class ITypeInstruction extends Instruction {
         if ((immediate & 0x8000) != 0) immediate |= 0xFFFF0000; // sign-extend
     }
 
+    @Override
+    public Instruction copy() {
+        ITypeInstruction c = new ITypeInstruction(getOpcode(), getBinary());
+        c.rs = this.rs;
+        c.rt = this.rt;
+        c.immediate = this.immediate;
+        return c;
+    }
+
     public int getRs() { return rs; }
     public int getRt() { return rt; }
     public int getImmediate() { return immediate; }
