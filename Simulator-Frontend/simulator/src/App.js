@@ -341,9 +341,12 @@ export default function MIPSSimulator() {
 
               {cpuState?.pipeline ? (
                 pipelineView === 'detailed' ? (
-                  <PipelineVisualization pipeline={cpuState.pipeline} />
+                  <PipelineVisualization pipeline={cpuState.pipeline} currentSnapshot={executionHistory.length > 0 ? executionHistory[executionHistory.length - 1] : null}
+                  />
                 ) : pipelineView === 'diagram' ? (
-                  <PipelineDiagram pipeline={cpuState.pipeline} />
+                  <PipelineDiagram pipeline={cpuState.pipeline} 
+                    currentSnapshot={executionHistory.length > 0 ? executionHistory[executionHistory.length - 1] : null}
+                  />
                 ) : (
                   <PipelineGantt history={executionHistory} />
                 )

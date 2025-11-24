@@ -1,26 +1,20 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { REGISTER_NAMES } from './Constants';
 
-export default function PipelineDiagram({ pipeline }) {
-
-  const prevMEMWB = useRef(null);
-
-// capture previous
-const last = prevMEMWB.current;
-
-// store new
-prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
-
-  const stageDataView = {
+export default function PipelineDiagram({ pipeline, currentSnapshot }) {
+  const stageDataView = currentSnapshot ? {
+    IF:  currentSnapshot.IF?.instruction ? { instruction: currentSnapshot.IF.instruction } : {},
+    ID:  currentSnapshot.ID?.instruction ? { instruction: currentSnapshot.ID.instruction } : {},
+    EX:  currentSnapshot.EX?.instruction ? { instruction: currentSnapshot.EX.instruction } : {},
+    MEM: currentSnapshot.MEM?.instruction ? { instruction: currentSnapshot.MEM.instruction } : {},
+    WB:  currentSnapshot.WB?.instruction ? { instruction: currentSnapshot.WB.instruction } : {}
+  } : {
     IF:  pipeline.IF_ID ?? {},
     ID:  pipeline.ID_EX ?? {},
     EX:  pipeline.EX_MEM ?? {},
     MEM: pipeline.MEM_WB ?? {},
-    WB:  last ?? {} 
+    WB:  {}
   };
-
-  console.log("MEM_WB object ID:", pipeline.MEM_WB);
-  console.log("prev:", prevMEMWB.current);
 
   const stages = [
     { name: 'IF',  key: 'IF',  color: 'bg-blue-500' },
@@ -36,28 +30,38 @@ prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
       <div className="flex items-center justify-between mb-8">
         {stages.map((stage, index) => {
           const stageData = stageDataView[stage.key];
-
+          
           const hasInstruction =
             stageData?.instruction?.hex &&
             stageData.instruction.hex !== 'null' &&
             stageData.instruction.hex !== '0x00000000';
 
+          const stageState = currentSnapshot?.[stage.key]?.state;
+          const isStall = stageState === 'STALL';
+          const isBubble = stageState === 'BUBBLE';
+          const isFlush = stageState === 'FLUSH';
+
           return (
             <React.Fragment key={stage.name}>
               
               <div className="relative group flex-1">
-                <div className={`${stage.color} ${hasInstruction ? 'opacity-100' : 'opacity-30'} rounded-lg p-4 text-center transition-all`}>
+                <div className={`${stage.color} ${
+                  hasInstruction ? 'opacity-100' : 'opacity-30'
+                } ${isStall ? 'animate-pulse' : ''} ${
+                  isBubble || isFlush ? 'opacity-20' : ''
+                } rounded-lg p-4 text-center transition-all`}>
                   <div className="font-bold text-white text-xl mb-2">{stage.name}</div>
                   {hasInstruction ? (
                     <div className="text-xs text-white/90 font-mono">
-                      {stageData.instruction.assembly.substring(0, 10)}...
+                      {stageData.instruction.assembly?.substring(0, 10) || stageData.instruction.hex.substring(0, 10)}...
                     </div>
                   ) : (
-                    <div className="text-xs text-white/60">Empty</div>
+                    <div className="text-xs text-white/60">
+                      {isStall ? 'Stalled' : isBubble ? 'Bubble' : isFlush ? 'Flushed' : 'Empty'}
+                    </div>
                   )}
                 </div>
 
-                {/* Tooltip */}
                 {hasInstruction && (
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-slate-800 border-2 border-purple-500 rounded-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 shadow-2xl">
                     <div className="text-xs space-y-1">
@@ -74,12 +78,15 @@ prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
                       {stageData.pc !== undefined && (
                         <div className="text-slate-300">PC: {stageData.pc}</div>
                       )}
+
+                      {stageState && (
+                        <div className="text-slate-400 mt-2">State: {stageState}</div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Arrow Between Stages */}
               {index < stages.length - 1 && (
                 <div className="flex items-center justify-center px-2">
                   <div className="text-purple-400 text-2xl">→</div>
@@ -90,7 +97,7 @@ prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
         })}
       </div>
 
-      {/* Data Path Visualization */}
+      {/*Data-path*/ }
       <div className="space-y-4 mt-8">
         <div className="text-sm font-semibold text-purple-300 mb-2">Data Path:</div>
 
@@ -126,9 +133,9 @@ prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
           <div className="bg-orange-900/30 border border-orange-500 rounded p-3 flex-1">
             <div className="text-xs font-bold text-orange-400 mb-1">Data Memory</div>
             <div className="text-xs text-slate-300">
-              {pipeline.EX_MEM?.memRead && <span className="text-blue-400">Reading...</span>}
-              {pipeline.EX_MEM?.memWrite && <span className="text-red-400">Writing...</span>}
-              {!pipeline.EX_MEM?.memRead && !pipeline.EX_MEM?.memWrite && (
+              {pipeline.MEM_WB?.memRead && <span className="text-blue-400">Reading...</span>}
+              {pipeline.MEM_WB?.memWrite && <span className="text-red-400">Writing...</span>}
+              {!pipeline.MEM_WB?.memRead && !pipeline.MEM_WB?.memWrite && (
                 <span className="text-slate-500">Idle</span>
               )}
             </div>
@@ -163,7 +170,6 @@ prevMEMWB.current = pipeline.MEM_WB ? structuredClone(pipeline.MEM_WB) : null;
           </div>
         </div>
 
-        {/* Legend */}
         <div className="bg-slate-800/30 rounded p-3 mt-4">
           <div className="text-xs font-bold text-slate-400 mb-2">Color Legend:</div>
           <div className="grid grid-cols-5 gap-2 text-xs">
