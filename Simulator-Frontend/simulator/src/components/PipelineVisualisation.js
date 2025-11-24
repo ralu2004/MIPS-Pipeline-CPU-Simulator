@@ -1,4 +1,5 @@
 import { STAGE_INFO, REGISTER_NAMES } from "./Constants";
+
 export default function PipelineVisualization({ pipeline, currentSnapshot }) {
 
   const stageDataView = currentSnapshot ? {
@@ -27,6 +28,11 @@ export default function PipelineVisualization({ pipeline, currentSnapshot }) {
     <div className="space-y-3">
       {stages.map((stage, index) => {
         const stageData = stageDataView[stage.key];
+        
+        // Get the actual pipeline data for signals
+        const pipelineStageData = currentSnapshot 
+          ? currentSnapshot[stage.key] 
+          : pipeline[`${stage.name}_${stages[index + 1]?.name || 'WB'}`];
 
         const hasInstruction =
           stageData?.instruction &&
@@ -123,16 +129,29 @@ export default function PipelineVisualization({ pipeline, currentSnapshot }) {
                     </div>
                   )}
 
-                  {/* FIXED: Check stageData directly for pc and destReg */}
-                  {stageData.pc !== undefined && (
+                  {/* FIXED: Use pipelineStageData instead of stageData for signals */}
+                  {pipelineStageData?.pc !== undefined && (
                     <div className="text-xs text-slate-400">
-                      PC: {stageData.pc}
+                      PC: {pipelineStageData.pc}
                     </div>
                   )}
 
-                  {stageData.destReg !== undefined && (
+                  {pipelineStageData?.destReg !== undefined && (
                     <div className="text-xs text-purple-300">
-                      Dest: {REGISTER_NAMES[stageData.destReg] ?? stageData.destReg}
+                      Dest: {REGISTER_NAMES[pipelineStageData.destReg] ?? pipelineStageData.destReg}
+                    </div>
+                  )}
+
+                  {/* Add other signals like in PipelineDiagram */}
+                  {pipelineStageData?.aluResult !== undefined && (
+                    <div className="text-xs text-orange-300">
+                      ALU Result: {pipelineStageData.aluResult}
+                    </div>
+                  )}
+
+                  {pipelineStageData?.regWrite !== undefined && (
+                    <div className="text-xs text-green-300">
+                      RegWrite: {pipelineStageData.regWrite ? 'ON' : 'OFF'}
                     </div>
                   )}
                 </div>

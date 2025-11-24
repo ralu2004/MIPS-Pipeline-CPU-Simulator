@@ -170,8 +170,7 @@ public class StateSerializer {
 		sb.append('}');
 		return sb.toString();
 	}
-
-
+	
 	private static String instructionToAssembly(Instruction instr) {
 		if (instr == null) return null;
 
