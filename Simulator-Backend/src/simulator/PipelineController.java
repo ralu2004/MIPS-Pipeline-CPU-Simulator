@@ -27,10 +27,6 @@ public class PipelineController {
     private boolean branchFlushedThisCycle = false;
     private Instruction lastWbInstr = null;
 
-    public List<PipelineSnapshot> getHistory() {
-        return history;
-    }
-
     public PipelineController(CPUState state) {
         this.cpuState = state;
     }
@@ -107,10 +103,6 @@ public class PipelineController {
         pipelineRegisters.ID_EX.setAluSrc(false);
         pipelineRegisters.ID_EX.setAluOp(0);
         pipelineRegisters.ID_EX.setInstruction(null);
-    }
-
-    public PipelineRegisters getPipelineRegisters() {
-        return pipelineRegisters;
     }
 
     public void clearPipeline() {
@@ -204,6 +196,14 @@ public class PipelineController {
 
         history.add(snapshot);
         branchFlushedThisCycle = false;
+    }
+
+    public PipelineRegisters getPipelineRegisters() {
+        return pipelineRegisters;
+    }
+
+    public List<PipelineSnapshot> getHistory() {
+        return history;
     }
 
 }
