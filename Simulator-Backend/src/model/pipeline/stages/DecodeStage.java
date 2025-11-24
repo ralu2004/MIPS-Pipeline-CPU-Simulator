@@ -73,7 +73,7 @@ public class DecodeStage implements PipelineStage {
         regs.ID_EX.setRegDst(controlUnit.isRegDst());
         regs.ID_EX.setAluSrc(controlUnit.isAluSrc());
         regs.ID_EX.setAluOp(controlUnit.getAluOp());
-        regs.ID_EX.setInstruction(instr);
+        regs.ID_EX.setInstruction(instr.copy());
     }
     
     private void clearID_EX(PipelineRegisters regs) {

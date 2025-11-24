@@ -141,17 +141,36 @@ public class StateSerializer {
 		if (instr == null) {
 			return "null";
 		}
+
 		StringBuilder sb = new StringBuilder();
 		sb.append('{');
+
 		sb.append("\"hex\":\"0x").append(String.format("%08X", instr.getBinary())).append('"');
 		sb.append(",\"opcode\":").append(instr.getOpcode());
+
 		String assembly = instructionToAssembly(instr);
 		if (assembly != null) {
 			sb.append(",\"assembly\":\"").append(escapeJson(assembly)).append('"');
 		}
+
+		if (instr instanceof RTypeInstruction rInstr) {
+			sb.append(",\"rs\":").append(rInstr.getRs());
+			sb.append(",\"rt\":").append(rInstr.getRt());
+			sb.append(",\"rd\":").append(rInstr.getRd());
+			sb.append(",\"shift\":").append(rInstr.getShamt());
+			sb.append(",\"func\":").append(rInstr.getFunc());
+		} else if (instr instanceof ITypeInstruction iInstr) {
+			sb.append(",\"rs\":").append(iInstr.getRs());
+			sb.append(",\"rt\":").append(iInstr.getRt());
+			sb.append(",\"immediate\":").append(iInstr.getImmediate());
+		} else if (instr instanceof JTypeInstruction jInstr) {
+			sb.append(",\"address\":").append(jInstr.getAddress());
+		}
+
 		sb.append('}');
 		return sb.toString();
 	}
+
 
 	private static String instructionToAssembly(Instruction instr) {
 		if (instr == null) return null;

@@ -114,7 +114,7 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setBranch(regs.ID_EX.isBranch());
         regs.EX_MEM.setMemRead(regs.ID_EX.isMemRead());
         regs.EX_MEM.setMemWrite(regs.ID_EX.isMemWrite());
-        regs.EX_MEM.setInstruction(instr);
+        regs.EX_MEM.setInstruction(instr.copy());
     }
 
     private void clearEX_MEM(PipelineRegisters regs) {

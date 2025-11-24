@@ -39,7 +39,7 @@ public class MemoryStage implements PipelineStage {
             cpuState.dataMemory.storeWord(aluResult, writeData);
         }
 
-        memWb.setInstruction(instr);
+        memWb.setInstruction(instr.copy());
         memWb.setAluResult(aluResult);
         memWb.setMemData(memData);
         memWb.setDestReg(destReg);

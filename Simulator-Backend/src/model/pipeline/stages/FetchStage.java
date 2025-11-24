@@ -11,7 +11,7 @@ public class FetchStage implements PipelineStage {
 
         Instruction instr = cpuState.instructionMemory.fetch(cpuState.pc.get());
         int pcPlus4 = cpuState.pc.get() + 4;
-        regs.IF_ID.set(instr, pcPlus4);
+        regs.IF_ID.set(instr == null ? null : instr.copy(), pcPlus4);
         cpuState.pc.increment();
     }
 }

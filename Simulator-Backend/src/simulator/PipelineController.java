@@ -67,13 +67,7 @@ public class PipelineController {
         copy.setDestReg(original.getDestReg());
         copy.setRegWrite(original.isRegWrite());
         copy.setMemToReg(original.isMemToReg());
-        copy.setInstruction(original.getInstruction());
-
-        System.out.println("SAVED MEM_WB: aluResult=" + copy.getAluResult() +
-                ", memData=" + copy.getMemData() +
-                ", destReg=" + copy.getDestReg() +
-                ", memToReg=" + copy.isMemToReg() +
-                ", writeData=" + copy.getWriteData());
+        copy.setInstruction(original.getInstruction() == null ? null : original.getInstruction().copy());
 
         return copy;
     }
