@@ -58,7 +58,7 @@ public class AssemblerTest {
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(5, result.machineCode.size(), "Should assemble 5 instructions");
 
-        // Format: opcode(6) | rs(5) | rt(5) | imm(16)
+        // opcode(6) | rs(5) | rt(5) | imm(16)
         // addi $t0, $s1, 100: 0x08 | 17<<21 | 8<<16 | 100 = 0x22280064
         assertEquals(0x22280064, result.machineCode.get(0));
         // addi $t1, $s2, -50: 0x08 | 18<<21 | 9<<16 | 0xFFCE = 0x2249FFCE
@@ -466,7 +466,6 @@ public class AssemblerTest {
     @Test
     @DisplayName("Debug I-type assembler")
     void debugITypeAssembler() {
-        // Test just one instruction
         String[] assembly = {"addi $t0, $s1, 100"};
 
         Assembler.AssemblyResult result = Assembler.assemble(assembly, START_ADDRESS);
@@ -478,11 +477,9 @@ public class AssemblerTest {
             int instr = result.machineCode.get(0);
             System.out.println("Generated: 0x" + Integer.toHexString(instr));
 
-            // What it should be
             int expected = (0x08 << 26) | (17 << 21) | (8 << 16) | 100;
             System.out.println("Expected: 0x" + Integer.toHexString(expected));
 
-            // Breakdown
             int opcode = (instr >>> 26) & 0x3F;
             int rs = (instr >>> 21) & 0x1F;
             int rt = (instr >>> 16) & 0x1F;

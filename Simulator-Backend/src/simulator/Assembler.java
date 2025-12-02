@@ -118,15 +118,12 @@ public class Assembler {
     }
 
     private static int assembleLine(String line, int address, Map<String, Integer> labels) {
-        System.out.println("DEBUG assembleLine: line='" + line + "'");
 
         String[] tokens = line.split("[,\\s()]+");
         List<String> parts = new ArrayList<>();
         for (String token : tokens) {
             if (!token.isEmpty()) parts.add(token.toLowerCase());
         }
-
-        System.out.println("  Parts after split: " + parts);
 
         if (parts.isEmpty()) {
             throw new IllegalArgumentException("Empty instruction");
@@ -160,7 +157,6 @@ public class Assembler {
             int rd = parseRegister(parts.get(1));
             int rt = parseRegister(parts.get(2));
             int shamt = parseImmediate(parts.get(3)) & 0x1F;
-            System.out.println("rd = " + rd + ", rt = " + rt + ", shamt = " + shamt + "funct = " + info.funct);
             return (info.opcode << 26) | (rt << 16) | (rd << 11) | (shamt << 6) | info.funct;
         } else {
             // op $rd, $rs, $rt
