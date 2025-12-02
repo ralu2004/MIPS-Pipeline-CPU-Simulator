@@ -74,6 +74,8 @@ public class ExecuteStage implements PipelineStage {
                 case 0x22: aluResult = aluInputA - aluInputB; break;
                 case 0x24: aluResult = aluInputA & aluInputB; break;
                 case 0x25: aluResult = aluInputA | aluInputB; break;
+                case 0x26: aluResult = aluInputA ^ aluInputB; break;
+                case 0x27: aluResult = ~(aluInputA | aluInputB); break;
                 case 0x2A: aluResult = (aluInputA < aluInputB) ? 1 : 0; break;
                 default: throw new UnsupportedOperationException(
                         "Unsupported R-type function: 0x" + Integer.toHexString(func));
