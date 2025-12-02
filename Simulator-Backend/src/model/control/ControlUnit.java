@@ -94,7 +94,7 @@ public class ControlUnit {
 
             case 0x0D: //ori
                 regWrite = true;
-                regDst = true;
+                regDst = false;
                 aluSrc = true;
                 memToReg = false;
                 branch = false;
@@ -106,7 +106,7 @@ public class ControlUnit {
 
             case 0x0C: //andi
                 regWrite = true;
-                regDst = true;
+                regDst = false;
                 aluSrc = true;
                 memToReg = false;
                 branch = false;
@@ -118,7 +118,7 @@ public class ControlUnit {
 
             case 0x0A: //slti
                 regWrite = true;
-                regDst = true;
+                regDst = false;
                 aluSrc = true;
                 memToReg = false;
                 branch = false;
