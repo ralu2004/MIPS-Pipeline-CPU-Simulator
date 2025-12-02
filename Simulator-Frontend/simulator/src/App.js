@@ -270,13 +270,18 @@ export default function MIPSSimulator() {
                     >
                       <div className="font-semibold mb-1">{name}</div>
                       <div className="text-xs text-slate-400 mb-2">
-                        {SAMPLE_PROGRAMS[name].description}
-                      </div>
+                      {SAMPLE_PROGRAMS[name].description}
+                    </div>
+                    
                       <div className="font-mono text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
                         {SAMPLE_PROGRAMS[name].assembly.split('\n').map((line, i) => (
                           <div key={i} className="text-green-400">{line}</div>
                         ))}
                       </div>
+                      <div className="font-mono text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
+                        {SAMPLE_PROGRAMS[name].expectedResults}
+                      </div>
+                      
                     </button>
                   ))}
                 </div>
@@ -286,7 +291,7 @@ export default function MIPSSimulator() {
                 <textarea
                   value={customCode}
                   onChange={(e) => setCustomCode(e.target.value)}
-                  placeholder="Enter hex instructions (one per line)&#10;Example:&#10;00221820&#10;00832022"
+                  placeholder="Enter MIPS assembly (one per line)&#10;Example:&#10;add $t0, $t1, $t2&#10;lw $s0, 0($sp)"
                   className="w-full h-40 bg-slate-900 border-2 border-slate-700 rounded-lg p-3 font-mono text-sm focus:outline-none focus:border-purple-500 resize-none"
                   disabled={isLoading}
                 />
