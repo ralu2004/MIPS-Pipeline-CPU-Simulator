@@ -48,6 +48,8 @@ public class Assembler {
         OPCODE_MAP.put("or", new OpcodeInfo(InstructionType.R, 0x00, 0x25));
         OPCODE_MAP.put("xor", new OpcodeInfo(InstructionType.R, 0x00, 0x26));
         OPCODE_MAP.put("nor", new OpcodeInfo(InstructionType.R, 0x00, 0x27));
+        OPCODE_MAP.put("sll", new OpcodeInfo(InstructionType.R, 0x00, 0x00));
+        OPCODE_MAP.put("srl", new OpcodeInfo(InstructionType.R, 0x00, 0x02));
         OPCODE_MAP.put("slt", new OpcodeInfo(InstructionType.R, 0x00, 0x2A));
 
         // I-Type
@@ -66,6 +68,11 @@ public class Assembler {
     }
 
     public static AssemblyResult assemble(String[] assemblyLines, int startAddress) {
+
+        if (assemblyLines == null) {
+            throw new IllegalArgumentException("No assembly instructions provided");
+        }
+
         List<Integer> machineCode = new ArrayList<>();
         List<String> errors = new ArrayList<>();
         Map<String, Integer> labels = new HashMap<>();
@@ -83,9 +90,10 @@ public class Assembler {
 
             if (line.isEmpty()) continue;
 
+            // label
             if (line.contains(":")) {
                 String[] parts = line.split(":", 2);
-                String label = parts[0].trim();
+                String label = parts[0].trim().toLowerCase();
                 labels.put(label, currentAddress);
                 line = parts.length > 1 ? parts[1].trim() : "";
                 if (line.isEmpty()) continue;
@@ -110,11 +118,15 @@ public class Assembler {
     }
 
     private static int assembleLine(String line, int address, Map<String, Integer> labels) {
+        System.out.println("DEBUG assembleLine: line='" + line + "'");
+
         String[] tokens = line.split("[,\\s()]+");
         List<String> parts = new ArrayList<>();
         for (String token : tokens) {
             if (!token.isEmpty()) parts.add(token.toLowerCase());
         }
+
+        System.out.println("  Parts after split: " + parts);
 
         if (parts.isEmpty()) {
             throw new IllegalArgumentException("Empty instruction");
@@ -140,15 +152,18 @@ public class Assembler {
     }
 
     private static int assembleRType(String op, List<String> parts, OpcodeInfo info) {
-        if (op.equals("sll") || op.equals("srl") || op.equals("sra")) {
+        if (op.equals("sll") || op.equals("srl")) {
+            // sll $rd, $rt, shamt
             if (parts.size() != 4) {
                 throw new IllegalArgumentException("Invalid format for " + op);
             }
             int rd = parseRegister(parts.get(1));
             int rt = parseRegister(parts.get(2));
             int shamt = parseImmediate(parts.get(3)) & 0x1F;
+            System.out.println("rd = " + rd + ", rt = " + rt + ", shamt = " + shamt + "funct = " + info.funct);
             return (info.opcode << 26) | (rt << 16) | (rd << 11) | (shamt << 6) | info.funct;
         } else {
+            // op $rd, $rs, $rt
             if (parts.size() != 4) {
                 throw new IllegalArgumentException("Invalid format for " + op);
             }
