@@ -29,9 +29,22 @@ public class ExecuteStage implements PipelineStage {
         System.out.println("MEM_WB.writeData=" + regs.MEM_WB.getWriteData());
         System.out.println("EX_MEM.aluResult=" + regs.EX_MEM.getAluResult());
 
+        boolean isShift = false;
+        int shamt = 0;
+        if (instr instanceof RTypeInstruction) {
+            RTypeInstruction rInstr = (RTypeInstruction) instr;
+            int func = rInstr.getFunc();
+            isShift = (func == 0x00 || func == 0x02); // sll, srl
+            if (isShift) {
+                shamt = rInstr.getShamt();
+            }
+        }
+
         // ALU input A
         int aluInputA;
-        if (forwarding.forwardA == 2) {
+        if (isShift) {
+            aluInputA = shamt;
+        } else if (forwarding.forwardA == 2) {
             aluInputA = regs.EX_MEM.getAluResult();
         } else if (forwarding.forwardA == 1) {
             aluInputA = regs.MEM_WB.getWriteData();
@@ -70,13 +83,15 @@ public class ExecuteStage implements PipelineStage {
             RTypeInstruction rInstr = (RTypeInstruction) instr;
             int func = rInstr.getFunc();
             switch (func) {
-                case 0x20: aluResult = aluInputA + aluInputB; break;
-                case 0x22: aluResult = aluInputA - aluInputB; break;
-                case 0x24: aluResult = aluInputA & aluInputB; break;
-                case 0x25: aluResult = aluInputA | aluInputB; break;
-                case 0x26: aluResult = aluInputA ^ aluInputB; break;
-                case 0x27: aluResult = ~(aluInputA | aluInputB); break;
-                case 0x2A: aluResult = (aluInputA < aluInputB) ? 1 : 0; break;
+                case 0x00: aluResult = aluInputB << aluInputA; break; //sll
+                case 0x02: aluResult = aluInputB >>> aluInputA; break; //srl
+                case 0x20: aluResult = aluInputA + aluInputB; break; //add
+                case 0x22: aluResult = aluInputA - aluInputB; break; //sub
+                case 0x24: aluResult = aluInputA & aluInputB; break; //and
+                case 0x25: aluResult = aluInputA | aluInputB; break; //or
+                case 0x26: aluResult = aluInputA ^ aluInputB; break; //xor
+                case 0x27: aluResult = ~(aluInputA | aluInputB); break; //nor
+                case 0x2A: aluResult = (aluInputA < aluInputB) ? 1 : 0; break; //slt
                 default: throw new UnsupportedOperationException(
                         "Unsupported R-type function: 0x" + Integer.toHexString(func));
             }
