@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * POST /api/load?start=0 -> load hex instructions into memory
+ * POST /api/load?start=0 -> load assembly instructions into memory
  */
 public class LoadHandler implements HttpHandler {
 
@@ -40,7 +40,7 @@ public class LoadHandler implements HttpHandler {
                     .toArray(String[]::new);
 
             ProgramLoader.ProgramLoadResult result =
-                    ProgramLoader.loadFromHexStrings(context.cpuState, lines, startAddress);
+                    ProgramLoader.loadFromAssembly(context.cpuState, lines, startAddress);
 
             String json = String.format(
                     "{\"loaded\":%d,\"start\":%d,\"end\":%d}",

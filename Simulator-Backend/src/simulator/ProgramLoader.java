@@ -15,6 +15,23 @@ public class ProgramLoader {
 	public static final int INSTRUCTION_MEMORY_WORDS = 1024;
 	public static final int INSTRUCTION_MEMORY_BYTES = INSTRUCTION_MEMORY_WORDS * 4;
 
+	public static ProgramLoadResult loadFromAssembly(CPUState state, String[] assemblyLines, int startAddress) {
+		validateStartAddress(startAddress);
+
+		if (assemblyLines == null || assemblyLines.length == 0)
+			throw new IllegalArgumentException("No assembly instructions to load");
+
+		Assembler.AssemblyResult asmResult = Assembler.assemble(assemblyLines, startAddress);
+
+		if (!asmResult.errors.isEmpty()) {
+			throw new IllegalArgumentException("Assembly errors: " + String.join("; ", asmResult.errors));
+		}
+
+		int[] words = asmResult.machineCode.stream().mapToInt(Integer::intValue).toArray();
+
+		return loadFromIntArray(state, words, startAddress);
+	}
+
 	public static ProgramLoadResult loadFromHexStrings(CPUState state, String[] hexLines, int startAddress) {
 		validateStartAddress(startAddress);
 
