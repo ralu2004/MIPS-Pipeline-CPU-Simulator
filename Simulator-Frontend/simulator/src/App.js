@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Upload, Cpu, AlertCircle, CheckCircle, StepForward, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, RotateCcw, Upload, Cpu, AlertCircle, CheckCircle, StepForward, ChevronDown, ChevronUp } from 'lucide-react';
 
 import PipelineGantt from './components/PipelineGantt';
 import PipelineDiagram from './components/PipelineDiagram';
@@ -219,14 +219,6 @@ export default function MIPSSimulator() {
               Reset
             </button>
             <button
-              onClick={fetchState}
-              disabled={isLoading}
-              className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
-            <button
               onClick={() => setShowProgramLoader(!showProgramLoader)}
               className="ml-auto bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm"
             >
@@ -274,7 +266,7 @@ export default function MIPSSimulator() {
                     </div>
                     
                       <div className="font-mono text-xs bg-slate-900/50 p-2 rounded border border-slate-700">
-                        {SAMPLE_PROGRAMS[name].assembly.split('\n').map((line, i) => (
+                        {SAMPLE_PROGRAMS[name].code.split('\n').map((line, i) => (
                           <div key={i} className="text-green-400">{line}</div>
                         ))}
                       </div>
