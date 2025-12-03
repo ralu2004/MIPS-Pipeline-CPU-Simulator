@@ -104,39 +104,6 @@ public class StateSerializer {
 		return sb.toString();
 	}
 
-	/*private static String serializeHistory(PipelineController controller) {
-		StringBuilder sb = new StringBuilder();
-		sb.append('[');
-
-		var history = controller.getHistory();
-		for (int i = 0; i < history.size(); i++) {
-			if (i > 0) sb.append(',');
-			PipelineSnapshot snap = history.get(i);
-
-			sb.append('{');
-			sb.append("\"IF\":").append(stageInfoToJson(snap.getIfStage())).append(',');
-			sb.append("\"ID\":").append(stageInfoToJson(snap.getIdStage())).append(',');
-			sb.append("\"EX\":").append(stageInfoToJson(snap.getExStage())).append(',');
-			sb.append("\"MEM\":").append(stageInfoToJson(snap.getMemStage())).append(',');
-			sb.append("\"WB\":").append(stageInfoToJson(snap.getWbStage()));
-			sb.append('}');
-		}
-
-		sb.append(']');
-		return sb.toString();
-	}
-
-	private static String stageInfoToJson(StageInfo info) {
-		if (info == null) return "null";
-
-		StringBuilder sb = new StringBuilder();
-		sb.append('{');
-		sb.append("\"state\":\"").append(info.getState()).append('"');
-		sb.append(",\"instruction\":").append(instrToJson(info.getInstruction()));
-		sb.append('}');
-		return sb.toString();
-	}
-*/
 	private static String serializeHistory(PipelineController controller) {
 		StringBuilder sb = new StringBuilder();
 		sb.append('[');
@@ -273,12 +240,15 @@ public class StateSerializer {
 			"$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
 		
 		switch (func) {
+			case 0x00: return "sll " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getShamt()];
+			case 0x02: return "srl " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getShamt()];
 			case 0x20: return "add " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
 			case 0x22: return "sub " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
 			case 0x24: return "and " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
 			case 0x25: return "or " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x26: return "xor " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
+			case 0x27: return "nor " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
 			case 0x2A: return "slt " + regNames[r.getRd()] + ", " + regNames[r.getRs()] + ", " + regNames[r.getRt()];
-			case 0x08: return "jr " + regNames[r.getRs()];
 			default: return "R-type (func: 0x" + Integer.toHexString(func) + ")";
 		}
 	}

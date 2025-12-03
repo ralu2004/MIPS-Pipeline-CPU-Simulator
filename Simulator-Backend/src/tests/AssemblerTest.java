@@ -173,7 +173,6 @@ public class AssemblerTest {
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(4, result.machineCode.size(), "Should assemble 4 instructions");
 
-        // Both should produce the same encoding
         assertEquals(0x02324020, result.machineCode.get(0));
         assertEquals(0x02324020, result.machineCode.get(1));
     }
