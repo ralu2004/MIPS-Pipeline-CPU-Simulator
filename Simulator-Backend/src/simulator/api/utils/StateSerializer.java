@@ -86,6 +86,8 @@ public class StateSerializer {
 		sb.append(",\"memWrite\":").append(regs.EX_MEM.isMemWrite());
 		sb.append(",\"branch\":").append(regs.EX_MEM.isBranch());
 		sb.append(",\"branchTaken\":").append(regs.EX_MEM.isBranchTaken());
+		sb.append(",\"forwardA\":").append(regs.EX_MEM.getForwardA());
+		sb.append(",\"forwardB\":").append(regs.EX_MEM.getForwardB());
 		sb.append('}');
 		sb.append(',');
 
@@ -163,6 +165,8 @@ public class StateSerializer {
 					sb.append(",\"memWrite\":").append(ex_mem.isMemWrite());
 					sb.append(",\"branch\":").append(ex_mem.isBranch());
 					sb.append(",\"branchTaken\":").append(ex_mem.isBranchTaken());
+					sb.append(",\"forwardA\":").append(ex_mem.getForwardA());
+					sb.append(",\"forwardB\":").append(ex_mem.getForwardB());
 					break;
 				case "MEM_WB":
 					MEM_WB_Register mem_wb = (MEM_WB_Register) register;

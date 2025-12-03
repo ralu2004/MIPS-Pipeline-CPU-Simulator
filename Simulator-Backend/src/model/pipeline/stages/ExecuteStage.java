@@ -132,6 +132,8 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setMemRead(regs.ID_EX.isMemRead());
         regs.EX_MEM.setMemWrite(regs.ID_EX.isMemWrite());
         regs.EX_MEM.setInstruction(instr.copy());
+        regs.EX_MEM.setForwardA(forwarding.forwardA);
+        regs.EX_MEM.setForwardB(forwarding.forwardB);
     }
 
     private void clearEX_MEM(PipelineRegisters regs) {
@@ -147,5 +149,7 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setMemRead(false);
         regs.EX_MEM.setMemWrite(false);
         regs.EX_MEM.setInstruction(null);
+        regs.EX_MEM.setForwardA(0);
+        regs.EX_MEM.setForwardB(0);
     }
 }

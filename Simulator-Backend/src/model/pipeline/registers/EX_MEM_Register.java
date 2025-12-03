@@ -15,6 +15,8 @@ public class EX_MEM_Register {
     private boolean branch;
     private boolean memRead;
     private boolean memWrite;
+    private int forwardA;
+    private int forwardB;
 
     private Instruction instruction;
 
@@ -30,6 +32,8 @@ public class EX_MEM_Register {
     public void setMemRead(boolean value) { this.memRead = value; }
     public void setMemWrite(boolean value) { this.memWrite = value; }
     public void setInstruction(Instruction instr) { this.instruction = instr; }
+    public void setForwardA(int forwardA) { this.forwardA = forwardA;}
+    public void setForwardB(int forwardB) { this.forwardB = forwardB;}
 
     public int getAluResult() { return aluResult; }
     public boolean isZeroFlag() { return zeroFlag; }
@@ -43,6 +47,8 @@ public class EX_MEM_Register {
     public boolean isMemRead() { return memRead; }
     public boolean isMemWrite() { return memWrite; }
     public Instruction getInstruction() { return instruction; }
+    public int getForwardA() { return forwardA;}
+    public int getForwardB() { return forwardB; }
 
     public int getRtValue() { return writeData; }
 }
