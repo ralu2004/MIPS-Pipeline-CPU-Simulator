@@ -225,7 +225,7 @@ export default function MIPSSimulator() {
               <input
                 type="range"
                 min="50"
-                max="2000"
+                max="3500"
                 step="50"
                 value={clockSpeed}
                 onChange={(e) => setClockSpeed(Number(e.target.value))}
