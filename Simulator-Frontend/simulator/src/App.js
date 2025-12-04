@@ -22,6 +22,7 @@ export default function MIPSSimulator() {
   const [showProgramLoader, setShowProgramLoader] = useState(true);
   const [pipelineView, setPipelineView] = useState('detailed'); 
   const [executionHistory, setExecutionHistory] = useState([]);
+  const [clockSpeed, setClockSpeed] = useState(500); // milliseconds per cycle
 
   const fetchState = useCallback(async () => {
     try {
@@ -130,10 +131,10 @@ export default function MIPSSimulator() {
 
   useEffect(() => {
     if (isRunning) {
-      const interval = setInterval(() => step(1), 500);
+      const interval = setInterval(() => step(1), clockSpeed);
       return () => clearInterval(interval);
     }
-  }, [isRunning, step]);
+  }, [isRunning, step, clockSpeed]);
 
   const handleLoadSample = (programName) => {
     setSelectedProgram(programName);
@@ -218,6 +219,24 @@ export default function MIPSSimulator() {
               <RotateCcw className="w-4 h-4" />
               Reset
             </button>
+            
+            <div className="flex items-center gap-2 bg-slate-800/80 rounded-lg px-3 py-2.5 border border-purple-500/30 h-9.2">
+              <label className="text-xs text-slate-400 whitespace-nowrap">Speed:</label>
+              <input
+                type="range"
+                min="50"
+                max="2000"
+                step="50"
+                value={clockSpeed}
+                onChange={(e) => setClockSpeed(Number(e.target.value))}
+                className="w-24 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                disabled={isLoading}
+              />
+              <span className="text-xs text-purple-400 font-mono whitespace-nowrap">
+                {clockSpeed}ms
+              </span>
+            </div>
+
             <button
               onClick={() => setShowProgramLoader(!showProgramLoader)}
               className="ml-auto bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm"
@@ -312,7 +331,7 @@ export default function MIPSSimulator() {
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  📋 Detailed
+                  Trace Mode
                 </button>
                 <button
                   onClick={() => setPipelineView('diagram')}
@@ -322,7 +341,7 @@ export default function MIPSSimulator() {
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  📊 Diagram
+                  Learning mode
                 </button>
                 <button
                   onClick={() => setPipelineView('gantt')}
@@ -332,7 +351,7 @@ export default function MIPSSimulator() {
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  📈 Timeline
+                  Timeline Diagram
                 </button>
               </div>
 
