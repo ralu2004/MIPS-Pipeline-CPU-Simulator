@@ -423,33 +423,294 @@ public class MIPSTest {
     }
 
     @Test
+    @DisplayName("Test 21: Shift Left Logical")
+    void testShiftLeftLogical() {
+        String[] assembly = {
+                "addi $t0, $zero, 1",     // $t0 = 1 (binary: 000...0001)
+                "sll $t1, $t0, 3",        // $t1 = 1 << 3 = 8 (binary: 000...1000)
+                "sll $t2, $t0, 0",        // $t2 = 1 << 0 = 1
+                "addi $t3, $zero, -1",    // $t3 = -1 (all 1s in two's complement)
+                "sll $t4, $t3, 16"        // $t4 = -1 << 16 = 0xFFFF0000
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(10);
+
+        assertEquals(8, cpuState.registerFile.get(9), "$t1 should be 8 (1 << 3)");
+        assertEquals(1, cpuState.registerFile.get(10), "$t2 should be 1 (1 << 0)");
+        assertEquals(0xFFFF0000, cpuState.registerFile.get(12), "$t4 should be 0xFFFF0000");
+    }
+
+    @Test
+    @DisplayName("Test 22: Shift Right Logical")
+    void testShiftRightLogical() {
+        String[] assembly = {
+                "addi $t0, $zero, 8",     // $t0 = 8 (binary: 000...1000)
+                "srl $t1, $t0, 3",        // $t1 = 8 >>> 3 = 1
+                "addi $t2, $zero, -1",    // $t2 = -1 (all 1s)
+                "srl $t3, $t2, 16"        // $t3 = -1 >>> 16 = 0x0000FFFF
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(8);
+
+        assertEquals(1, cpuState.registerFile.get(9), "$t1 should be 1 (8 >>> 3)");
+        assertEquals(0x0000FFFF, cpuState.registerFile.get(11), "$t3 should be 0x0000FFFF");
+    }
+
+    @Test
+    @DisplayName("Test 23: Jump and Link")
+    void testJumpAndLink() {
+        String[] assembly = {
+                "jal function",          // Jump to function, save return address in $ra
+                "j end",                // Jump over the function
+                "function:",
+                "addi $t1, $zero, 42",  // Function body
+                "j end",                // Jump to end (instead of jr $ra)
+                "addi $t0, $zero, 99",  // Should execute after function returns
+                "end:",
+                "addi $t2, $zero, 77"
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(12);
+
+        int expectedRA = 0x00000004; // jal is at address 0, so PC+4 = 4
+        assertEquals(expectedRA, cpuState.registerFile.get(31), "$ra should contain return address");
+        assertEquals(42, cpuState.registerFile.get(9), "$t1 should be 42");
+        assertEquals(77, cpuState.registerFile.get(10), "$t2 should be 77");
+    }
+
+    @Test
+    @DisplayName("Test 24: Immediate Logical Operations")
+    void testImmediateLogical() {
+        String[] assembly = {
+                "addi $t0, $zero, 0xFF",  // $t0 = 255
+                "ori $t1, $t0, 0x0F0",    // $t1 = 255 | 240 = 255
+                "andi $t2, $t0, 0x0F",    // $t2 = 255 & 15 = 15
+                "addi $t3, $zero, 10",
+                "slti $t4, $t3, 20",      // $t4 = 10 < 20 = 1
+                "slti $t5, $t3, 5"        // $t5 = 10 < 5 = 0
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(12);
+
+        assertEquals(255, cpuState.registerFile.get(9), "$t1 should be 255 (ORI)");
+        assertEquals(15, cpuState.registerFile.get(10), "$t2 should be 15 (ANDI)");
+        assertEquals(1, cpuState.registerFile.get(12), "$t4 should be 1 (SLTI true)");
+        assertEquals(0, cpuState.registerFile.get(13), "$t5 should be 0 (SLTI false)");
+    }
+
+    @Test
+    @DisplayName("Test 25: Memory Alignment")
+    void testMemoryAlignment() {
+        String[] assembly = {
+                "addi $t0, $zero, 0x5678",    // Only lower 16 bits (0x5678 = 22136)
+                "sw $t0, 0($zero)",           // Store at aligned address 0
+                "sw $t0, 4($zero)",           // Store at aligned address 4
+                "lw $t1, 0($zero)",           // Load from address 0
+                "lw $t2, 4($zero)",           // Load from address 4
+                // Test negative offsets
+                "addi $t3, $zero, 100",
+                "sw $t0, -4($t3)",            // Store at address 96
+                "lw $t4, -4($t3)"             // Load from address 96
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(14);
+
+        // 0x5678 = 22136
+        assertEquals(0x5678, cpuState.registerFile.get(9), "$t1 should be 0x5678");
+        assertEquals(0x5678, cpuState.registerFile.get(10), "$t2 should be 0x5678");
+        assertEquals(0x5678, cpuState.registerFile.get(12), "$t4 should be 0x5678");
+        assertEquals(0x5678, cpuState.dataMemory.loadWord(0), "Memory[0] should be 0x5678");
+        assertEquals(0x5678, cpuState.dataMemory.loadWord(96), "Memory[96] should be 0x5678");
+    }
+
+    @Test
+    @DisplayName("Test 26: Complex Pipeline Hazards")
+    void testComplexPipelineHazards() {
+        String[] assembly = {
+                // Test back-to-back dependencies
+                "addi $t0, $zero, 1",
+                "add $t1, $t0, $t0",      // depends on $t0
+                "add $t2, $t1, $t1",      // depends on $t1
+                "add $t3, $t2, $t2",      // depends on $t2
+                "add $t4, $t3, $t3",      // depends on $t3
+                // Test alternating dependencies
+                "addi $t5, $zero, 2",
+                "addi $t6, $zero, 3",
+                "add $t7, $t5, $t6",      // depends on $t5, $t6
+                "sub $t8, $t7, $t5",      // depends on $t7, $t5
+                "and $t9, $t8, $t6"       // depends on $t8, $t6
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(20);
+
+        assertEquals(2, cpuState.registerFile.get(9), "$t1 should be 2");
+        assertEquals(4, cpuState.registerFile.get(10), "$t2 should be 4");
+        assertEquals(8, cpuState.registerFile.get(11), "$t3 should be 8");
+        assertEquals(16, cpuState.registerFile.get(12), "$t4 should be 16");
+        assertEquals(5, cpuState.registerFile.get(15), "$t7 should be 5");
+        assertEquals(3, cpuState.registerFile.get(24), "$t8 should be 3");
+        assertEquals(3 & 3, cpuState.registerFile.get(25), "$t9 should be 3 & 3 = 3");
+    }
+
+    @Test
+    @DisplayName("Test 27: Control Hazard Variations")
+    void testControlHazardVariations() {
+        String[] assembly = {
+                // Test branch delay slot (even though you resolve branches in ID)
+                "addi $t0, $zero, 1",
+                "addi $t1, $zero, 1",
+                "beq $t0, $t1, equal",
+                "addi $t2, $zero, 99",    // Should be skipped
+                "j end",
+                "equal:",
+                "addi $t2, $zero, 42",    // Should execute
+                "end:",
+                // Test nested branches
+                "addi $t3, $zero, 5",
+                "addi $t4, $zero, 10",
+                "slt $t5, $t3, $t4",      // $t5 = 1
+                "bne $t5, $zero, outer",
+                "addi $t6, $zero, 11",
+                "j finish",
+                "outer:",
+                "addi $t6, $zero, 22",
+                "beq $t3, $t4, inner",    // Should not be taken
+                "addi $t7, $zero, 33",
+                "j finish",
+                "inner:",
+                "addi $t7, $zero, 44",
+                "finish:"
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(20);
+
+        assertEquals(42, cpuState.registerFile.get(10), "$t2 should be 42");
+        assertEquals(22, cpuState.registerFile.get(14), "$t6 should be 22");
+        assertEquals(33, cpuState.registerFile.get(15), "$t7 should be 33");
+    }
+
+    @Test
+    @DisplayName("Test 28: Zero Register Corner Cases")
+    void testZeroRegisterCornerCases() {
+        String[] assembly = {
+                // Various attempts to modify $zero
+                "add $zero, $zero, $zero",    // Should do nothing
+                "sub $zero, $zero, $zero",    // Should do nothing
+                "and $zero, $zero, $zero",    // Should do nothing
+                "or $zero, $zero, $zero",     // Should do nothing
+                "xor $zero, $zero, $zero",    // Should do nothing
+                "nor $zero, $zero, $zero",    // Should do nothing
+                "slt $zero, $zero, $zero",    // Should do nothing
+                "sll $zero, $zero, 5",        // Should do nothing
+                "srl $zero, $zero, 5",        // Should do nothing
+                // Using $zero as source
+                "add $t0, $zero, $zero",      // $t0 = 0
+                "addi $t1, $zero, 100",       // $t1 = 100
+                "add $t2, $t1, $zero",        // $t2 = 100
+                "sub $t3, $t1, $zero",        // $t3 = 100
+                "and $t4, $t1, $zero",        // $t4 = 0
+                "or $t5, $t1, $zero",         // $t5 = 100
+                "slt $t6, $zero, $t1"         // $t6 = 1 (0 < 100)
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(25);
+
+        assertEquals(0, cpuState.registerFile.get(0), "$zero should still be 0");
+        assertEquals(0, cpuState.registerFile.get(8), "$t0 should be 0");
+        assertEquals(100, cpuState.registerFile.get(9), "$t1 should be 100");
+        assertEquals(100, cpuState.registerFile.get(10), "$t2 should be 100");
+        assertEquals(100, cpuState.registerFile.get(11), "$t3 should be 100");
+        assertEquals(0, cpuState.registerFile.get(12), "$t4 should be 0");
+        assertEquals(100, cpuState.registerFile.get(13), "$t5 should be 100");
+        assertEquals(1, cpuState.registerFile.get(14), "$t6 should be 1");
+    }
+
+    @Test
+    @DisplayName("Test 29: Data Memory Edge Cases")
+    void testDataMemoryEdgeCases() {
+        String[] assembly = {
+                // Test storing/loading with 16-bit value
+                "addi $t0, $zero, 0xBEEF",    // Only lower 16 bits (0xBEEF = -16657 in signed 16-bit)
+                "sw $t0, 0($zero)",           // Store at address 0
+                "sw $t0, 1020($zero)",        // Store near end of typical memory
+                "lw $t1, 0($zero)",
+                "lw $t2, 1020($zero)",
+                // Test sequential stores/loads with hazards
+                "addi $t3, $zero, 1",
+                "sw $t3, 100($zero)",         // Store 1
+                "addi $t3, $zero, 2",
+                "sw $t3, 100($zero)",         // Store 2 (overwrite)
+                "lw $t4, 100($zero)",         // Should load 2
+                // Test load-use with different offsets
+                "addi $t5, $zero, 200",
+                "sw $t0, 0($t5)",             // Store at address 200
+                "lw $t6, 0($t5)",             // Load from address 200
+                "add $t7, $t6, $zero"         // Use loaded value
+        };
+
+        ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
+        runCycles(20);
+
+        // Note: 0xBEEF as signed 16-bit is -16657
+        // But when loaded as 32-bit word, it should be sign-extended to 0xFFFFBEEF
+        // Or zero-extended depending on your implementation
+        // You need to check your sign extension logic
+        int expected = 0xFFFFBEEF; // If sign-extended
+
+        // OR if your implementation doesn't sign-extend on lw:
+        // expected = 0x0000BEEF;
+
+        assertEquals(expected, cpuState.registerFile.get(9), "$t1 should be 0xFFFFBEEF (sign-extended)");
+        assertEquals(expected, cpuState.registerFile.get(10), "$t2 should be 0xFFFFBEEF");
+        assertEquals(2, cpuState.registerFile.get(12), "$t4 should be 2");
+        assertEquals(expected, cpuState.registerFile.get(15), "$t7 should be 0xFFFFBEEF");
+    }
+
+    @Test
     @DisplayName("Complete Test Suite Run")
     void runCompleteTestSuite() {
         System.out.println("Starting complete MIPS test suite...");
 
-        int totalTests = 20;
+        int totalTests = 29;
         int passedTests = 0;
 
-        try { setUp(); testBasicArithmetic(); passedTests++; System.out.println("✓ Test 1 passed"); } catch (Exception e) { System.out.println("✗ Test 1 failed: " + e.getMessage()); }
-        try { setUp(); testRAWHazard(); passedTests++; System.out.println("✓ Test 2 passed"); } catch (Exception e) { System.out.println("✗ Test 2 failed: " + e.getMessage()); }
-        try { setUp(); testLoadUseHazard(); passedTests++; System.out.println("✓ Test 3 passed"); } catch (Exception e) { System.out.println("✗ Test 3 failed: " + e.getMessage()); }
-        try { setUp(); testMemoryOperations(); passedTests++; System.out.println("✓ Test 4 passed"); } catch (Exception e) { System.out.println("✗ Test 4 failed: " + e.getMessage()); }
-        try { setUp(); testBranchEqualTaken(); passedTests++; System.out.println("✓ Test 5 passed"); } catch (Exception e) { System.out.println("✗ Test 5 failed: " + e.getMessage()); }
-        try { setUp(); testBranchEqualNotTaken(); passedTests++; System.out.println("✓ Test 6 passed"); } catch (Exception e) { System.out.println("✗ Test 6 failed: " + e.getMessage()); }
-        try { setUp(); testBranchNotEqual(); passedTests++; System.out.println("✓ Test 7 passed"); } catch (Exception e) { System.out.println("✗ Test 7 failed: " + e.getMessage()); }
-        try { setUp(); testLogicalOperations(); passedTests++; System.out.println("✓ Test 8 passed"); } catch (Exception e) { System.out.println("✗ Test 8 failed: " + e.getMessage()); }
-        try { setUp(); testSetLessThan(); passedTests++; System.out.println("✓ Test 9 passed"); } catch (Exception e) { System.out.println("✗ Test 9 failed: " + e.getMessage()); }
-        try { setUp(); testZeroRegister(); passedTests++; System.out.println("✓ Test 10 passed"); } catch (Exception e) { System.out.println("✗ Test 10 failed: " + e.getMessage()); }
-        try { setUp(); testNegativeNumbers(); passedTests++; System.out.println("✓ Test 11 passed"); } catch (Exception e) { System.out.println("✗ Test 11 failed: " + e.getMessage()); }
-        try { setUp(); testOverflow(); passedTests++; System.out.println("✓ Test 12 passed"); } catch (Exception e) { System.out.println("✗ Test 12 failed: " + e.getMessage()); }
-        try { setUp(); testSequentialMemory(); passedTests++; System.out.println("✓ Test 13 passed"); } catch (Exception e) { System.out.println("✗ Test 13 failed: " + e.getMessage()); }
-        try { setUp(); testLoopCounter(); passedTests++; System.out.println("✓ Test 14 passed"); } catch (Exception e) { System.out.println("✗ Test 14 failed: " + e.getMessage()); }
-        try { setUp(); testFibonacci(); passedTests++; System.out.println("✓ Test 15 passed"); } catch (Exception e) { System.out.println("✗ Test 15 failed: " + e.getMessage()); }
-        try { setUp(); testOffsetAddressing(); passedTests++; System.out.println("✓ Test 16 passed"); } catch (Exception e) { System.out.println("✗ Test 16 failed: " + e.getMessage()); }
-        try { setUp(); testMultipleHazards(); passedTests++; System.out.println("✓ Test 17 passed"); } catch (Exception e) { System.out.println("✗ Test 17 failed: " + e.getMessage()); }
-        try { setUp(); testBranchWithHazard(); passedTests++; System.out.println("✓ Test 18 passed"); } catch (Exception e) { System.out.println("✗ Test 18 failed: " + e.getMessage()); }
-        try { setUp(); testComplexControlFlow(); passedTests++; System.out.println("✓ Test 19 passed"); } catch (Exception e) { System.out.println("✗ Test 19 failed: " + e.getMessage()); }
-        try { setUp(); testStressTest(); passedTests++; System.out.println("✓ Test 20 passed"); } catch (Exception e) { System.out.println("✗ Test 20 failed: " + e.getMessage()); }
+        try { setUp(); testBasicArithmetic(); passedTests++; System.out.println("Test 1 passed"); } catch (Exception e) { System.out.println("Test 1 failed: " + e.getMessage()); }
+        try { setUp(); testRAWHazard(); passedTests++; System.out.println("Test 2 passed"); } catch (Exception e) { System.out.println("Test 2 failed: " + e.getMessage()); }
+        try { setUp(); testLoadUseHazard(); passedTests++; System.out.println("Test 3 passed"); } catch (Exception e) { System.out.println("Test 3 failed: " + e.getMessage()); }
+        try { setUp(); testMemoryOperations(); passedTests++; System.out.println("Test 4 passed"); } catch (Exception e) { System.out.println("Test 4 failed: " + e.getMessage()); }
+        try { setUp(); testBranchEqualTaken(); passedTests++; System.out.println("Test 5 passed"); } catch (Exception e) { System.out.println("Test 5 failed: " + e.getMessage()); }
+        try { setUp(); testBranchEqualNotTaken(); passedTests++; System.out.println("Test 6 passed"); } catch (Exception e) { System.out.println("Test 6 failed: " + e.getMessage()); }
+        try { setUp(); testBranchNotEqual(); passedTests++; System.out.println("Test 7 passed"); } catch (Exception e) { System.out.println("Test 7 failed: " + e.getMessage()); }
+        try { setUp(); testLogicalOperations(); passedTests++; System.out.println("Test 8 passed"); } catch (Exception e) { System.out.println("Test 8 failed: " + e.getMessage()); }
+        try { setUp(); testSetLessThan(); passedTests++; System.out.println("Test 9 passed"); } catch (Exception e) { System.out.println("Test 9 failed: " + e.getMessage()); }
+        try { setUp(); testZeroRegister(); passedTests++; System.out.println("Test 10 passed"); } catch (Exception e) { System.out.println("Test 10 failed: " + e.getMessage()); }
+        try { setUp(); testNegativeNumbers(); passedTests++; System.out.println("Test 11 passed"); } catch (Exception e) { System.out.println("Test 11 failed: " + e.getMessage()); }
+        try { setUp(); testOverflow(); passedTests++; System.out.println("Test 12 passed"); } catch (Exception e) { System.out.println("Test 12 failed: " + e.getMessage()); }
+        try { setUp(); testSequentialMemory(); passedTests++; System.out.println("Test 13 passed"); } catch (Exception e) { System.out.println("Test 13 failed: " + e.getMessage()); }
+        try { setUp(); testLoopCounter(); passedTests++; System.out.println("Test 14 passed"); } catch (Exception e) { System.out.println("Test 14 failed: " + e.getMessage()); }
+        try { setUp(); testFibonacci(); passedTests++; System.out.println("Test 15 passed"); } catch (Exception e) { System.out.println("Test 15 failed: " + e.getMessage()); }
+        try { setUp(); testOffsetAddressing(); passedTests++; System.out.println("Test 16 passed"); } catch (Exception e) { System.out.println("Test 16 failed: " + e.getMessage()); }
+        try { setUp(); testMultipleHazards(); passedTests++; System.out.println("Test 17 passed"); } catch (Exception e) { System.out.println("Test 17 failed: " + e.getMessage()); }
+        try { setUp(); testBranchWithHazard(); passedTests++; System.out.println("Test 18 passed"); } catch (Exception e) { System.out.println("Test 18 failed: " + e.getMessage()); }
+        try { setUp(); testComplexControlFlow(); passedTests++; System.out.println("Test 19 passed"); } catch (Exception e) { System.out.println("Test 19 failed: " + e.getMessage()); }
+        try { setUp(); testStressTest(); passedTests++; System.out.println("Test 20 passed"); } catch (Exception e) { System.out.println("Test 20 failed: " + e.getMessage()); }
+        try { setUp(); testShiftLeftLogical(); passedTests++; System.out.println("Test 21 passed"); } catch (Exception e) { System.out.println("Test 21 failed: " + e.getMessage()); }
+        try { setUp(); testShiftRightLogical(); passedTests++; System.out.println("Test 22 passed"); } catch (Exception e) { System.out.println("Test 22 failed: " + e.getMessage()); }
+        try { setUp(); testJumpAndLink(); passedTests++; System.out.println("Test 23 passed"); } catch (Exception e) { System.out.println("Test 23 failed: " + e.getMessage()); }
+        try { setUp(); testImmediateLogical(); passedTests++; System.out.println("Test 24 passed"); } catch (Exception e) { System.out.println("Test 24 failed: " + e.getMessage()); }
+        try { setUp(); testMemoryAlignment(); passedTests++; System.out.println("Test 25 passed"); } catch (Exception e) { System.out.println("Test 25 failed: " + e.getMessage()); }
+        try { setUp(); testComplexPipelineHazards(); passedTests++; System.out.println("Test 26 passed"); } catch (Exception e) { System.out.println("Test 26 failed: " + e.getMessage()); }
+        try { setUp(); testControlHazardVariations(); passedTests++; System.out.println("Test 27 passed"); } catch (Exception e) { System.out.println("Test 27 failed: " + e.getMessage()); }
+        try { setUp(); testZeroRegisterCornerCases(); passedTests++; System.out.println("Test 28 passed"); } catch (Exception e) { System.out.println("Test 28 failed: " + e.getMessage()); }
+        try { setUp(); testDataMemoryEdgeCases(); passedTests++; System.out.println("Test 29 passed"); } catch (Exception e) { System.out.println("Test 29 failed: " + e.getMessage()); }
 
         System.out.println("Test Suite Complete: " + passedTests + "/" + totalTests + " tests passed");
 
