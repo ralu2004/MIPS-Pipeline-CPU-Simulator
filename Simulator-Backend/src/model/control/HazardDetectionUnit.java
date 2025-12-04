@@ -50,14 +50,14 @@ public class HazardDetectionUnit {
         if (regs.ID_EX.getInstruction() != null && regs.ID_EX.isRegWrite() && !regs.ID_EX.isMemRead()) {
             int exDestReg = regs.ID_EX.isRegDst() ? regs.ID_EX.getRd() : regs.ID_EX.getRt();
 
-            if (idRs == exDestReg || idRt == exDestReg) {
+            if (exDestReg != 0 && (idRs == exDestReg || idRt == exDestReg)) {
                 detectedHazards.add("DATA_HAZARD: Can be resolved by forwarding");
             }
         }
 
         if (regs.EX_MEM.getInstruction() != null && regs.EX_MEM.isRegWrite()) {
             int memDestReg = regs.EX_MEM.getDestReg();
-            if (idRs == memDestReg || idRt == memDestReg) {
+            if (memDestReg != 0 && (idRs == memDestReg || idRt == memDestReg)) {
                 detectedHazards.add("DATA_HAZARD: Can be resolved by forwarding from MEM/WB");
             }
         }
