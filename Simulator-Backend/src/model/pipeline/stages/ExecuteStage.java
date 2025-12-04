@@ -21,7 +21,6 @@ public class ExecuteStage implements PipelineStage {
         int readData1 = regs.ID_EX.getReadData1();
         int readData2 = regs.ID_EX.getReadData2();
         int signExtendedImm = regs.ID_EX.getSignExtendedImm();
-        int pcPlus4 = regs.ID_EX.getPcPlus4();
 
         ForwardingUnit.ForwardingResult forwarding = forwardingUnit.determineForwarding(regs);
 
@@ -106,10 +105,6 @@ public class ExecuteStage implements PipelineStage {
         int destReg = regs.ID_EX.isRegDst() ? regs.ID_EX.getRd() : regs.ID_EX.getRt();
         System.out.println("EX Stage: opcode=" + instr.getOpcode() + ", RegDst=" + regs.ID_EX.isRegDst() + ", destReg=" + destReg);
 
-        // branch
-        int branchTarget = pcPlus4 + (signExtendedImm << 2);
-        boolean branchTaken = regs.ID_EX.isBranch() && zeroFlag;
-
         // store - write data
         int writeDataForStore;
         if (forwarding.forwardB == 2) {
@@ -123,12 +118,10 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setAluResult(aluResult);
         regs.EX_MEM.setZeroFlag(zeroFlag);
         regs.EX_MEM.setWriteData(writeDataForStore);
-        regs.EX_MEM.setBranchTarget(branchTarget);
-        regs.EX_MEM.setBranchTaken(branchTaken);
         regs.EX_MEM.setDestReg(destReg);
         regs.EX_MEM.setRegWrite(regs.ID_EX.isRegWrite());
         regs.EX_MEM.setMemToReg(regs.ID_EX.isMemToReg());
-        regs.EX_MEM.setBranch(regs.ID_EX.isBranch());
+        regs.EX_MEM.setBranch(false);
         regs.EX_MEM.setMemRead(regs.ID_EX.isMemRead());
         regs.EX_MEM.setMemWrite(regs.ID_EX.isMemWrite());
         regs.EX_MEM.setInstruction(instr.copy());
@@ -140,8 +133,6 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setAluResult(0);
         regs.EX_MEM.setZeroFlag(false);
         regs.EX_MEM.setWriteData(0);
-        regs.EX_MEM.setBranchTarget(0);
-        regs.EX_MEM.setBranchTaken(false);
         regs.EX_MEM.setDestReg(0);
         regs.EX_MEM.setRegWrite(false);
         regs.EX_MEM.setMemToReg(false);
