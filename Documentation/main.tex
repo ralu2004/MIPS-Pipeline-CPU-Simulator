@@ -10,6 +10,7 @@
 \usepackage{tabularx}
 \usepackage{rotating}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{float}
 \usepackage[backend=biber, style=numeric, sorting=ynt]{biblatex}
 \usepackage{colortbl}
@@ -121,8 +122,9 @@ This project addresses this educational gap by providing a visual simulation sof
 The proposed application will consist of:
 \begin{itemize}
     \item An execution engine that simulates the MIPS instruction flow and pipeline stages.
-    \item An intuitive graphical user interface for interactive visualization that allows users to either input custom instructions or select predefined programs.
-    \item The possibility to simulate at least 15 MIPS instructions (R, I, and J types).
+    \item An intuitive graphical user interface for interactive visualization that allows users to either input custom MIPS assembly code or select predefined programs.
+    \item An assembler component that converts assembly language instructions into binary machine code for execution.
+    \item The possibility to simulate 21 MIPS instructions (R, I, and J types).
     \item Real-time visualization of the 5 pipeline stages (IF, ID, EX, MEM, WB).
     \item Display of registers, memory contents, ALU operations, and control flags.
 \end{itemize}
@@ -232,13 +234,13 @@ The supported instruction set includes:
 
 \textbf{R-type (Register Operations):} 
 \begin{itemize}
-    \item \texttt{ADD, SUB, AND, OR, SLT}
+    \item \texttt{ADD, SUB, AND, OR, XOR, NOR, SLL, SRL, SLT}
     \item \textcolor{blue}{Example: \texttt{add \$t0, \$t1, \$t2} - Register addition}
 \end{itemize}
 
 \textbf{I-type (Immediate/Memory Operations):}
 \begin{itemize}
-    \item \texttt{ADDI, LW, SW, BEQ, BNE}  
+    \item \texttt{ADDI, ANDI, ORI, SLTI, LW, SW, BEQ, BNE}  
     \item \textcolor{green!70!black}{Example: \texttt{lw \$t0, 4(\$sp)} - Memory load operation}
 \end{itemize}
 
@@ -314,7 +316,7 @@ This RTL description provides the formal specification for instruction execution
 
 \subsection{Supported Instruction Set}
 \label{subsec:supported-instructions}
-The simulator implements 18 core MIPS instructions covering arithmetic, memory, and control flow operations:
+The simulator implements 21 core MIPS instructions covering arithmetic, memory, and control flow operations:
 
 \begin{table}[H]
 \centering
@@ -329,6 +331,10 @@ ADD & \texttt{add rd, rs, rt} & Integer addition \\
 SUB & \texttt{sub rd, rs, rt} & Integer subtraction \\
 AND & \texttt{and rd, rs, rt} & Bitwise AND \\
 OR & \texttt{or rd, rs, rt} & Bitwise OR \\
+XOR & \texttt{xor rd, rs, rt} & Bitwise XOR \\
+NOR & \texttt{nor rd, rs, rt} & Bitwise NOR \\
+SLL & \texttt{sll rd, rt, shamt} & Shift left logical \\
+SRL & \texttt{srl rd, rt, shamt} & Shift right logical \\
 SLT & \texttt{slt rd, rs, rt} & Set less than (signed) \\
 \hline
 \rowcolor{gray!10}
@@ -348,7 +354,6 @@ SLTI & \texttt{slti rt, rs, imm} & Set less than immediate \\
 \hline
 J & \texttt{j target} & Unconditional jump \\
 JAL & \texttt{jal target} & Jump and link \\
-JR & \texttt{jr rs} & Jump to register \\
 \hline
 \end{tabularx}
 \caption{Complete instruction set supported by the simulator.}
@@ -519,7 +524,7 @@ The layered approach promotes separation of concerns, making the design easy to 
     \label{fig:use_case}
 \end{figure}
 
-As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program, execute it step-by-step or continuously, inspect the pipeline state, and enable or disable hazard resolution mechanisms. The main interactions include program loading, execution control, state inspection, and simulation reset.
+As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program written in assembly language, execute it step-by-step or continuously, inspect the pipeline state, and enable or disable hazard resolution mechanisms. The main interactions include program loading (assembly code input), execution control, state inspection, and simulation reset.
 
 \section{Simulator Components}
 
@@ -576,6 +581,12 @@ Tracks the address of the instruction currently being fetched. Updated each cycl
 
 Generates the control signals required by each instruction type, influencing multiplexers, ALU operations, and memory control lines.
 
+\vspace{1ex}
+
+\textbf{Program Loading Components}
+
+The \textbf{Assembler} and \textbf{ProgramLoader} classes handle program input and initialization. The \textbf{Assembler} converts human-readable MIPS assembly code into binary machine code instructions, supporting label resolution, register name parsing, and instruction encoding. The \textbf{ProgramLoader} manages the loading of assembled instructions into instruction memory, validating addresses and managing program state initialization.
+
 \subsection{Pipeline Stages}
 
 Each stage encapsulates its corresponding MIPS pipeline function:
@@ -611,11 +622,12 @@ Hazard detection and forwarding operate concurrently during each cycle to mainta
 
 \section{User Interface Components}
 
-The visualization layer presents the internal state of the simulator in real time. It includes:
+The visualization layer presents the simulator's internal state in real-time. It includes:
 
 \begin{itemize}
     \item \textbf{PipelineVisualizer}: Displays the content and status of each pipeline stage.
     \item \textbf{RegisterDisplay}: Shows current register values and highlights recent changes.
+    \item \textbf{DataMemoryDisplay}: Shows the current contents of the data memory.
     \item \textbf{ControlPanel}: Provides execution controls for stepping, running, pausing, and resetting the simulation.
 \end{itemize}
 
@@ -635,10 +647,9 @@ During each clock cycle, the following sequence occurs:
 
 \chapter{Implementation}\label{ch:implementation}
 
-This chapter presents the implementation of the simulator, focusing on the Java backend and the web API for frontend communication. The implementation follows the architectural design from Chapter~\ref{ch:design} to build a functioning simulation engine with an intuitive user interface.
+This chapter presents the implementation of the simulator, with a focus on the Java backend and the web API for frontend communication. The implementation follows the architectural design of Chapter~\ref{ch: design} to build a functioning simulation engine with an intuitive user interface.
 
 \section{Backend Implementation}
-
 \subsection{Overall Architecture}
 
 The backend implementation follows a modular, object-oriented architecture that closely mirrors the MIPS pipeline structure. The system is organized into several key packages:
@@ -649,7 +660,8 @@ The backend implementation follows a modular, object-oriented architecture that 
     \item \textbf{model.control:} Houses the control unit, hazard detection unit, forwarding unit, and stall unit.
     \item \textbf{model.pipeline.stages:} Contains the five pipeline stage implementations (Fetch, Decode, Execute, Memory, WriteBack).
     \item \textbf{model.pipeline.registers:} Implements pipeline registers that buffer data between stages.
-    \item \textbf{simulator:} Provides the main simulation engine, clock, and API server for frontend communication.
+    \item \textbf{model.pipeline.state:} Contains classes responsible for capturing and representing the current state of the pipeline stages during simulation. These classes provide a snapshot of pipeline activity, enabling visualization and state tracking throughout the execution process.
+    \item \textbf{simulator:} Provides the main simulation engine, clock, and API server (\textbf{simulator.api}) for frontend communication.
 \end{itemize}
 
 \subsection{Instruction Implementation}
@@ -733,7 +745,6 @@ The \textbf{DataMemory} class provides word-aligned load and store operations fo
 \end{itemize}
 
 \subsection{CPU State Components}
-
 \subsection*{Register File}
 
 The \textbf{RegisterFile} class models the 32 general-purpose registers in the MIPS CPU through an Integer array. Register 0 (\$zero) is immutable and always holds the value 0. Other registers can be read and written using \textbf{get()} and \textbf{set()} methods.
@@ -836,7 +847,6 @@ public static class StallControl {
 \end{lstlisting}
 
 \subsection{Pipeline Representation}
-
 \subsection*{Pipeline Stages}
 
 The MIPS CPU pipeline is implemented through five concrete classes, each derived from the \textbf{PipelineStage} interface:
@@ -894,6 +904,39 @@ The pipeline register classes implement the buffering mechanism between pipeline
 
 The method \textbf{getWriteData()} selects between ALU result and memory data based on the \texttt{memToReg} signal.
 
+
+\subsection*{Pipeline State}
+
+The pipeline state is managed through three core classes that capture the operational status of the pipeline for visualization and monitoring:
+
+\begin{itemize}
+    \item \textbf{PipelineSnapshot} --- Captures a complete snapshot of all five pipeline stages at a given clock cycle, enabling comprehensive state visualization and API serialization.
+    
+    \begin{lstlisting}[style=javaStyle]
+    public class PipelineSnapshot {
+        private final StageInfo ifStage, idStage, exStage, memStage, wbStage;
+        // Constructor and getters for all five stages
+    }
+    \end{lstlisting}
+    
+    \item \textbf{StageInfo} --- Represents the state and content of an individual pipeline stage, combining operational status with the current instruction being processed.
+
+    \begin{lstlisting}[style=javaStyle]
+    public class StageInfo {
+        private final StageState state;
+        private final Instruction instruction;
+    }
+    \end{lstlisting}
+
+    
+    \item \textbf{StageState} --- Defines the operational modes for pipeline stages, including normal execution (\texttt{INSTR}), hazard-induced stalls (\texttt{STALL}), inserted bubbles (\texttt{BUBBLE}), branch-related flushes (\texttt{FLUSH}), and empty states (\texttt{EMPTY}).
+
+    \begin{lstlisting}[style=javaStyle]
+    public enum StageState {
+        INSTR, STALL, BUBBLE, FLUSH, EMPTY
+    }
+    \end{lstlisting}
+\end{itemize}
 \subsection{The Simulation Engine}
 
 \subsection*{Pipeline Controller}
@@ -961,12 +1004,13 @@ The \textbf{tick()} method advances the simulation by one clock cycle, while \te
 The \textbf{ProgramLoader} class handles initialization and loading of MIPS programs into instruction memory, supporting multiple input formats:
 
 \begin{itemize}
+    \item \textbf{Assembly Code:} Human-readable MIPS assembly language instructions
     \item \textbf{Integer Array:} Direct 32-bit integer values representing binary instruction words
-    \item \textbf{Hexadecimal Strings:} Text-based hex representation (with or without \texttt{0x} prefix)
 \end{itemize}
 
 Key features include:
 \begin{itemize}
+    \item \textbf{Assembly Code Processing:} Converts assembly language to binary machine code using the \textbf{Assembler} class before loading into instruction memory
     \item \textbf{Instruction Parsing:} examines the 6 most significant bits (opcode) to determine instruction format.
     \begin{lstlisting}[style=javaStyle]
     public static Instruction parseInstruction(int binaryWord) {
@@ -987,16 +1031,21 @@ Key features include:
     \item \textbf{State Management:} Provides methods to reset CPU state
 \end{itemize}
 
-The \textbf{loadFromHexStrings()} method processes hex input:
+The \textbf{loadFromAssembly()} method processes assembly code input:
 \begin{lstlisting}[style=javaStyle]
-public static ProgramLoadResult loadFromHexStrings(
-    CPUState state, String[] hexLines, int startAddress) {
+public static ProgramLoadResult loadFromAssembly(
+    CPUState state, String[] assemblyLines, int startAddress) {
     validateStartAddress(startAddress);
     
-    int[] words = new int[hexLines.length];
-    for (int i = 0; i < hexLines.length; i++) {
-        words[i] = parseHexToInt(hexLines[i]);
+    Assembler.AssemblyResult asmResult = Assembler.assemble(assemblyLines, startAddress);
+    
+    if (!asmResult.errors.isEmpty()) {
+        throw new IllegalArgumentException("Assembly errors: " + 
+            String.join("; ", asmResult.errors));
     }
+    
+    int[] words = asmResult.machineCode.stream()
+        .mapToInt(Integer::intValue).toArray();
     
     return loadFromIntArray(state, words, startAddress);
 }
@@ -1008,6 +1057,140 @@ The \textbf{ProgramLoadResult} class encapsulates load operation outcomes:
     \item Start and end addresses of the loaded program
     \item List of warnings generated during loading
 \end{itemize}
+
+\subsection*{Assembler}
+
+The \textbf{Assembler} class provides functionality to convert human-readable MIPS assembly code into binary machine code instructions. This enables users to write programs in assembly language rather than requiring manual binary or hexadecimal encoding of instructions.
+
+\paragraph{Assembly Language Support:}
+
+The assembler supports the complete instruction set implemented by the simulator, including:
+
+\begin{itemize}
+    \item \textbf{R-type instructions:} \texttt{add}, \texttt{sub}, \texttt{and}, \texttt{or}, \texttt{xor}, \texttt{nor}, \texttt{sll}, \texttt{srl}, \texttt{slt}
+    \item \textbf{I-type instructions:} \texttt{addi}, \texttt{andi}, \texttt{ori}, \texttt{slti}, \texttt{lw}, \texttt{sw}, \texttt{beq}, \texttt{bne}
+    \item \textbf{J-type instructions:} \texttt{j}, \texttt{jal}
+\end{itemize}
+
+\paragraph{Register Name Resolution:}
+
+The assembler maintains a comprehensive mapping of MIPS register names to their numeric encodings, supporting both standard names and numeric aliases:
+
+\begin{lstlisting}[style=javaStyle]
+REGISTER_MAP.put("$zero", 0); REGISTER_MAP.put("$0", 0);
+REGISTER_MAP.put("$t0", 8); REGISTER_MAP.put("$8", 8);
+REGISTER_MAP.put("$s0", 16); REGISTER_MAP.put("$16", 16);
+// ... all 32 registers with both name and numeric forms
+\end{lstlisting}
+
+This allows flexible register specification, accepting either \texttt{\$t0} or \texttt{\$8} for the same register, improving code readability and compatibility with different assembly syntax conventions.
+
+\paragraph{Label Processing:}
+
+The assembler implements a two-pass algorithm to handle labels for branch and jump instructions:
+
+\begin{enumerate}
+    \item \textbf{First Pass:} Scans all assembly lines to identify label definitions (lines ending with \texttt{:}) and builds a symbol table mapping label names to their instruction addresses.
+    \item \textbf{Second Pass:} Assembles instructions, resolving label references in branch and jump instructions by computing relative offsets or absolute addresses.
+\end{enumerate}
+
+For branch instructions (\texttt{beq}, \texttt{bne}), the assembler calculates the relative offset from the current instruction to the target label:
+
+\begin{lstlisting}[style=javaStyle]
+if (labels.containsKey(parts.get(3))) {
+    int targetAddress = labels.get(parts.get(3));
+    offset = ((targetAddress - (address + 4)) / 4) & 0xFFFF;
+}
+\end{lstlisting}
+
+For jump instructions (\texttt{j}, \texttt{jal}), the target address is encoded as an absolute word address:
+
+\begin{lstlisting}[style=javaStyle]
+if (labels.containsKey(parts.get(1))) {
+    address = labels.get(parts.get(1)) / 4;
+}
+address &= 0x3FFFFFF;
+return (info.opcode << 26) | address;
+\end{lstlisting}
+
+\paragraph{Instruction Format Handling:}
+
+The assembler parses and encodes each instruction type according to its format:
+
+\textbf{R-type Instructions:} The assembler extracts destination register (\texttt{rd}), source registers (\texttt{rs}, \texttt{rt}), shift amount (for \texttt{sll}/\texttt{srl}), and function code, then encodes them into the 32-bit instruction word:
+
+\begin{lstlisting}[style=javaStyle]
+// Standard R-type: op $rd, $rs, $rt
+return (info.opcode << 26) | (rs << 21) | (rt << 16) | 
+       (rd << 11) | info.funct;
+
+// Shift instructions: op $rd, $rt, shamt
+return (info.opcode << 26) | (rt << 16) | (rd << 11) | 
+       (shamt << 6) | info.funct;
+\end{lstlisting}
+
+\textbf{I-type Instructions:} Handles three variants:
+\begin{itemize}
+    \item \textbf{Load/Store:} \texttt{lw/sw \$rt, offset(\$rs)} - encodes base register, destination/source register, and 16-bit signed offset
+    \item \textbf{Branch:} \texttt{beq/bne \$rs, \$rt, label} - encodes source registers and computed branch offset
+    \item \textbf{Immediate:} \texttt{addi/andi/ori/slti \$rt, \$rs, imm} - encodes registers and 16-bit immediate value
+\end{itemize}
+
+\textbf{J-type Instructions:} Encodes the 26-bit target address for \texttt{j} and \texttt{jal} instructions.
+
+\paragraph{Input Processing Features:}
+
+The assembler includes robust input processing capabilities:
+
+\begin{itemize}
+    \item \textbf{Comment Handling:} Strips comments (text following \texttt{\#}) from assembly lines
+    \item \textbf{Whitespace Tolerance:} Handles flexible spacing and formatting, including instructions with varying amounts of whitespace
+    \item \textbf{Case Insensitivity:} Accepts instruction mnemonics and register names in any case (e.g., \texttt{ADD}, \texttt{add}, \texttt{Add})
+    \item \textbf{Immediate Value Parsing:} Supports both decimal and hexadecimal immediate values (e.g., \texttt{100}, \texttt{0x64}, \texttt{0xFF})
+    \item \textbf{Parentheses Flexibility:} Handles memory addressing with flexible spacing: \texttt{lw \$t0, 100(\$s1)} or \texttt{lw \$t0, 100 ( \$s1 )}
+\end{itemize}
+
+\paragraph{Error Reporting:}
+
+The assembler provides comprehensive error reporting through the \textbf{AssemblyResult} class:
+
+\begin{lstlisting}[style=javaStyle]
+public static class AssemblyResult {
+    public final List<Integer> machineCode;
+    public final List<String> errors;
+}
+\end{lstlisting}
+
+Errors are collected per-line, allowing partial assembly to proceed even when some instructions contain errors. Error messages include:
+\begin{itemize}
+    \item Unknown instruction mnemonics
+    \item Invalid register names
+    \item Malformed instruction syntax (missing operands, incorrect format)
+    \item Invalid immediate values (non-numeric strings, out-of-range values)
+\end{itemize}
+
+\paragraph{Usage Example:}
+
+The assembler is invoked with an array of assembly lines and a starting address:
+
+\begin{lstlisting}[style=javaStyle]
+String[] assembly = {
+    "main:",
+    "    addi $t0, $zero, 10",
+    "    addi $t1, $zero, 0",
+    "loop:",
+    "    beq $t0, $zero, end",
+    "    addi $t1, $t1, 1",
+    "    addi $t0, $t0, -1",
+    "    j loop",
+    "end:",
+    "    sw $t1, 0($sp)"
+};
+
+Assembler.AssemblyResult result = Assembler.assemble(assembly, 0x00400000);
+\end{lstlisting}
+
+The resulting \textbf{machineCode} list contains 32-bit binary instruction words ready for loading into instruction memory via the \textbf{ProgramLoader}.
 
 \subsection{API Server and Frontend Integration}
 
@@ -1045,14 +1228,14 @@ public class ApiServer {
 The \textbf{ServerContext} class wraps the \textbf{CPUState}, \textbf{PipelineController}, and \textbf{Clock} instances to maintain a single source of information during the simulation. It can be said that the core of the simulator is kept here.
 
 \subsection*{API Endpoints}
-
+\label{subsec:api_endpoints}
 The API exposes five main endpoints, each taken care of by a handler class— \textbf{LoadHandler}, \textbf{StepHandler}, \textbf{StateHandler}, \textbf{ResetHandler}, \textbf{HealthHandler}:
 
 \begin{enumerate}
     \item \textbf{POST /api/load} --- Loads a program into instruction memory
     \begin{itemize}
         \item Query parameter: \texttt{start} (default: 0) --- Starting address for program loading
-        \item Request body: Newline-separated hexadecimal instruction strings
+        \item Request body: Newline-separated MIPS assembly code instructions
         \item Response: JSON containing loaded count, start address, and end address
     \end{itemize}
 
@@ -1113,7 +1296,9 @@ public static String serialize(CPUState state, PipelineController controller) {
     sb.append("{");
     sb.append("\"pc\":").append(state.pc.get()).append(',');
     sb.append("\"registers\":").append(serializeRegisters(state)).append(',');
-    sb.append("\"pipeline\":").append(serializePipeline(controller));
+    sb.append("\"pipeline\":").append(serializePipeline(controller)).append(',');
+    sb.append("\"dataMemory\":").append(serializeDataMemory(state));
+    sb.append(",\"pipelineHistory\":").append(serializeHistory(controller));
     sb.append("}");
     return sb.toString();
 }
@@ -1139,6 +1324,832 @@ The API implements robust error handling:
 
 This design ensures that the frontend receives meaningful error messages and can handle any conditions that may arise during simulation.
 
+\section{Frontend Implementation}
+
+The frontend of the Simulator is implemented as a React web application which provides an interactive visualization interface for the simulation. Built with modern React patterns and Tailwind CSS, it offers real-time visualization of pipeline stages, register states, and memory contents.
+
+\subsection{Application Architecture}
+
+The application follows a component-based architecture centered around the main \texttt{App.js} component, which manages global state including CPU state, execution history, and user interface preferences. 
+
+State management utilizes React hooks to maintain synchronization with the Java API in the backend through the RESTful endpoints described in Section~\ref{subsec:api_endpoints}.
+
+The interface supports both predefined sample programs and custom user code with proper validation and error handling.
+
+\subsection{Visualization Components}
+
+\subsubsection{Pipeline Visualization System}
+
+The application provides three distinct pipeline visualization modes:
+\begin{itemize}
+    \item \textbf{Detailed Pipeline View:} a vertical stack of all five stages with instruction information, such as including hex codes, program counters, and destination registers;
+    \item \textbf{Pipeline Diagram View:} horizontal representation with color-coded stages and integrated data path visualization, showing real-time component activity including pipeline registers components, register file operations, ALU computations, and memory access patterns; 
+    \item \textbf{Pipeline Gantt Chart:} provides temporal analysis through a cycle-by-cycle tabular display that tracks instruction progression and visually identifies pipeline hazards through color-coded states, including stalls, bubbles, and flushes.
+\end{itemize}
+
+\subsubsection{Data Display Components}
+
+The \textbf{Register Grid} displays all 32 MIPS registers with dual decimal and hexadecimal representation, featuring hover tooltips that explain each register's architectural purpose and visual highlighting for active registers. 
+
+The \textbf{Memory Grid} shows data memory contents with proper address-value mapping and hexadecimal formatting, providing insight into memory access patterns during program execution. 
+
+Supporting components include the \texttt{Card} container for consistent UI styling, \texttt{EmptyState} placeholders for initialization states, and the \texttt{Constants.js} configuration file, which centralizes sample programs, stage descriptions, and register documentation.
+
+\subsection{Simulation Control Panel}
+
+The control panel handles simulation management through a toolbar interface. It features step execution controls for both single-cycle and multi-cycle advancement, a run/pause toggle for continuous execution, a reset function for re-initializing the simulator state, and a clock frequency control slider. The program loader toggle enables dynamic switching between sample programs and custom code input, while the real-time display shows the current program counter value with dual decimal and hexadecimal representation. 
+
+\chapter{Testing and Validation}
+\label{sec:testing}
+
+The MIPS pipeline simulator is validated through a series of unit tests covering all major components and pipeline scenarios. The testing strategy employs systematic verification of individual components followed by integration testing of the complete pipeline.
+
+\section{Test Execution Environment}
+\begin{itemize}
+    \item Framework: JUnit 5.10.2
+    \item Java Version: OpenJDK 23.0.1
+    \item IDE: IntelliJ IDEA 2024.2.3
+    \item Build Tool: Maven
+\end{itemize}
+
+\section{Unit Tests - Component Validation}
+\label{sec:unit-tests}
+
+Before integration testing, each component is validated in isolation. The following tables summarize the unit tests for each major simulator component.
+
+\subsection{Register File Unit Tests}
+
+\begin{table}[H]
+\centering
+\caption{RegisterFileTest Results}
+\label{tab:register-file-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Operation} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testSetAndGetRegister & set(5, 123); get(5) & 123 & 123 & \checkmark \\
+testZeroRegisterAlwaysZero & set(0, 999); get(0) & 0 & 0 & \checkmark \\
+testOverwriteRegister & set(10, 55); set(10, 99) & 99 & 99 & \checkmark \\
+testAllRegistersInitiallyZero & get(0..31) & All 0 & All 0 & \checkmark \\
+testSettingZeroRegister & set(0, 999); get(1) & 100, 0 & 100, 0 & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Data Memory Unit Tests}
+\begin{table}[H]
+\centering
+\caption{DataMemoryTest Results}
+\label{tab:data-memory-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Operation} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testStoreAndLoadWord & store(0, 12345); load(0) & 12345 & 12345 & \checkmark \\
+testMultipleAddresses & store(0,10); store(4,20) & 10, 20, 30 & 10, 20, 30 & \checkmark \\
+testLoadOutOfRange & load(-4); load(5000) & 0, 0 & 0, 0 & \checkmark \\
+testStoreOutOfRange & store(-4, 999) & No exception & No exception & \checkmark \\
+testWordAlignment & store(8, 123); load(8) & 123 & 123 & \checkmark \\
+testSizeBytes & memory.sizeBytes() & 4096 & 4096 & \checkmark \\
+testDefaultValues & load(0); load(100) & 0 & 0 & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Instruction Memory Unit Tests}
+\begin{table}[H]
+\centering
+\caption{InstructionMemoryTest Results}
+\label{tab:instr-memory-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Operation} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testFetchRType & set(0, R-type); fetch(0) & opcode=0 & opcode=0 & \checkmark \\
+testFetchIType & set(4, I-type); fetch(4) & opcode=8 & opcode=8 & \checkmark \\
+testFetchJType & set(8, J-type); fetch(8) & opcode=2 & opcode=2 & \checkmark \\
+testFetchInvalidHigh & fetch(5000) & null & null & \checkmark \\
+testFetchInvalidNegative & fetch(-4) & null & null & \checkmark \\
+testWordAlignment & set(4, R); set(8, I) & Correct & Correct & \checkmark \\
+testConstructorArray & new InstrMem(arr) & arr correct & arr correct & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Control Unit Tests}
+\begin{table}[H]
+\centering
+\caption{ControlUnitTest Results - Control Signal Generation (All Tests Pass \checkmark)}
+\label{tab:control-unit-tests}
+\footnotesize
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Opcode} & \textbf{RegW} & \textbf{RegDst} & \textbf{ALUSrc} & \textbf{MemR} & \textbf{MemW} & \textbf{Branch} & \textbf{Jump} & \textbf{ALUOp} \\
+\hline
+R-type (0x00) & \checkmark & \checkmark & - & - & - & - & - & 2 \\
+lw (0x23) & \checkmark & - & \checkmark & \checkmark & - & - & - & 0 \\
+sw (0x2B) & - & - & \checkmark & - & \checkmark & - & - & 0 \\
+beq (0x04) & - & - & - & - & - & \checkmark & - & 1 \\
+bne (0x05) & - & - & - & - & - & \checkmark & - & 1 \\
+addi (0x08) & \checkmark & - & \checkmark & - & - & - & - & 0 \\
+ori (0x0D) & \checkmark & - & \checkmark & - & - & - & - & 3 \\
+andi (0x0C) & \checkmark & - & \checkmark & - & - & - & - & 4 \\
+slti (0x0A) & \checkmark & - & \checkmark & - & - & - & - & 5 \\
+j (0x02) & - & - & - & - & - & - & \checkmark & - \\
+jal (0x03) & \checkmark & - & - & - & - & - & \checkmark & - \\
+Unknown & - & - & - & - & - & - & - & 0 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Forwarding Unit Tests}
+\begin{table}[H]
+\centering
+\caption{ForwardingUnitTest Results}
+\label{tab:forwarding-unit-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Scenario} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testForwardFromEXMEM & ID/EX uses \$2, EX/MEM writes \$2 & fwdA=2 & fwdA=2 & \checkmark \\
+testForwardFromMEMWB & ID/EX uses \$6, MEM/WB writes \$6 & fwdB=1 & fwdB=1 & \checkmark \\
+testNoForwardingNeeded & No dependencies & fwdA=0, B=0 & fwdA=0, B=0 & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsection{Hazard Detection Unit Tests}
+\begin{table}[H]
+\centering
+\caption{HazardDetectionUnitTest Results}
+\label{tab:hazard-detection-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Scenario} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testNoHazardsPipelineEmpty & Empty pipeline & No hazard & No hazard & \checkmark \\
+testLoadUseHazard & lw \$t0; add uses \$t0 & Detected & Detected & \checkmark \\
+testDataHazardFromEX & add \$t0; sub uses \$t0 & Detected & Detected & \checkmark \\
+testDataHazardFromMEM & or \$t1; addi uses \$t1 & Detected & Detected & \checkmark \\
+testControlHazardBranch & Branch taken in EX/MEM & Detected & Detected & \checkmark \\
+testControlHazardJump & Jump in IF/ID & Detected & Detected & \checkmark \\
+testStructuralHazard & EX/MEM, MEM/WB same reg & Detected & Detected & \checkmark \\
+testNoHazardDiffRegs & Different src/dest regs & No hazard & No hazard & \checkmark \\
+testZeroRegisterNoHazard & Write to \$zero & No hazard & No hazard & \checkmark \\
+testLoadUseIType & lw; addi uses loaded & Detected & Detected & \checkmark \\
+testZeroRegHazardIgnored & EX/MEM writes \$zero & No hazard & No hazard & \checkmark \\
+testNoHazardIDEmpty & ID stage empty & No hazard & No hazard & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Stall Unit Tests}
+\begin{table}[H]
+\centering
+\caption{StallUnitTest Results}
+\label{tab:stall-unit-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Scenario} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testDetectsLoadUseHazard & lw \$2; add uses \$2 & stall=true & stall=true & \checkmark \\
+testNoStallWhenNoHazard & Independent instructions & stall=false & stall=false & \checkmark \\
+testControlSignalsReset & Hazard then no hazard & Signals reset & Signals reset & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Clock Unit Tests}
+\begin{table}[H]
+\centering
+\caption{ClockTest Results}
+\label{tab:clock-tests}
+\small
+\begin{tabular}{|l|l|c|c|c|}
+\hline
+\textbf{Test Method} & \textbf{Operation} & \textbf{Expected} & \textbf{Actual} & \textbf{Pass} \\
+\hline
+testTickIncrementsCycle & tick() & cycle=1 & cycle=1 & \checkmark \\
+testRunMultipleCycles & run(5) & cycle=5 & cycle=5 & \checkmark \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Unit Test Summary}
+\begin{table}[H]
+\centering
+\caption{Unit Test Results by Component}
+\label{tab:unit-test-summary}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Component} & \textbf{Test Count} & \textbf{Passed} & \textbf{Status} \\
+\hline
+RegisterFile & 5 & 5 & \textcolor{green}{\textbf{PASS}} \\
+DataMemory & 7 & 7 & \textcolor{green}{\textbf{PASS}} \\
+InstructionMemory & 7 & 7 & \textcolor{green}{\textbf{PASS}} \\
+ControlUnit & 17 & 17 & \textcolor{green}{\textbf{PASS}} \\
+ForwardingUnit & 3 & 3 & \textcolor{green}{\textbf{PASS}} \\
+HazardDetectionUnit & 12 & 12 & \textcolor{green}{\textbf{PASS}} \\
+StallUnit & 3 & 3 & \textcolor{green}{\textbf{PASS}} \\
+Clock & 2 & 2 & \textcolor{green}{\textbf{PASS}} \\
+Assembler & 20 & 20 & \textcolor{green}{\textbf{PASS}} \\
+\hline
+\textbf{Total Unit Tests} & \textbf{76} & \textbf{76} & \textcolor{green}{\textbf{100\%}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Integration Tests - Pipeline Validation}
+\label{sec:integration-tests}
+
+The integration tests validate the complete pipeline behavior using assembly programs that exercise multiple components simultaneously. The following tables present detailed test results organized by functional category.
+
+\subsection{Arithmetic Operations Tests}
+
+\begin{table}[H]
+\centering
+\caption{Test 1: Basic Arithmetic Operations}
+\label{tab:test1}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 10} & \$t0 = 10 & \$t0 = 10 \\
+\texttt{addi \$t1, \$zero, 5} & \$t1 = 5 & \$t1 = 5 \\
+\texttt{add \$t0, \$t0, \$t1} & \$t0 = 15 & \$t0 = 15 \\
+\texttt{sub \$t1, \$t0, \$t0} & \$t1 = 0 & \$t1 = 0 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 11: Negative Number Arithmetic}
+\label{tab:test11}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, -1} & \$t0 = -1 & \$t0 = -1 \\
+\texttt{addi \$t1, \$zero, -10} & \$t1 = -10 & \$t1 = -10 \\
+\texttt{add \$t2, \$t0, \$t1} & \$t2 = -11 & \$t2 = -11 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 12: Overflow Behavior}
+\label{tab:test12}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 32767} & \$t0 = 32767 & \$t0 = 32767 \\
+\texttt{addi \$t0, \$t0, 32767} & \$t0 = 65534 & \$t0 = 65534 \\
+\texttt{addi \$t0, \$t0, 2} & \$t0 = 65536 & \$t0 = 65536 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Logical Operations Tests}
+
+\begin{table}[H]
+\centering
+\caption{Test 8: Bitwise Logical Operations}
+\label{tab:test8}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 15} & \$t0 = 0x0F & \$t0 = 0x0F \\
+\texttt{addi \$t1, \$zero, 240} & \$t1 = 0xF0 & \$t1 = 0xF0 \\
+\texttt{and \$t2, \$t0, \$t1} & \$t2 = 0 & \$t2 = 0 \\
+\texttt{or \$t3, \$t0, \$t1} & \$t3 = 255 & \$t3 = 255 \\
+\texttt{xor \$t4, \$t0, \$t0} & \$t4 = 0 & \$t4 = 0 \\
+\texttt{nor \$t5, \$zero, \$zero} & \$t5 = -1 & \$t5 = -1 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 9: Set Less Than (SLT)}
+\label{tab:test9}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 5} & \$t0 = 5 & \$t0 = 5 \\
+\texttt{addi \$t1, \$zero, 10} & \$t1 = 10 & \$t1 = 10 \\
+\texttt{slt \$t2, \$t0, \$t1} & \$t2 = 1 (5 < 10) & \$t2 = 1 \\
+\texttt{slt \$t3, \$t1, \$t0} & \$t3 = 0 (10 < 5) & \$t3 = 0 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 24: Immediate Logical Operations}
+\label{tab:test24}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 0xFF} & \$t0 = 255 & \$t0 = 255 \\
+\texttt{ori \$t1, \$t0, 0x0F0} & \$t1 = 255 & \$t1 = 255 \\
+\texttt{andi \$t2, \$t0, 0x0F} & \$t2 = 15 & \$t2 = 15 \\
+\texttt{slti \$t4, \$t3, 20} & \$t4 = 1 (10<20) & \$t4 = 1 \\
+\texttt{slti \$t5, \$t3, 5} & \$t5 = 0 (10<5) & \$t5 = 0 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Shift Operations Tests}
+
+\begin{table}[H]
+\centering
+\caption{Test 21: Shift Left Logical (SLL)}
+\label{tab:test21}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 1} & \$t0 = 1 & \$t0 = 1 \\
+\texttt{sll \$t1, \$t0, 3} & \$t1 = 8 & \$t1 = 8 \\
+\texttt{sll \$t2, \$t0, 0} & \$t2 = 1 & \$t2 = 1 \\
+\texttt{addi \$t3, \$zero, -1} & \$t3 = 0xFFFFFFFF & \$t3 = 0xFFFFFFFF \\
+\texttt{sll \$t4, \$t3, 16} & \$t4 = 0xFFFF0000 & \$t4 = 0xFFFF0000 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 22: Shift Right Logical (SRL)}
+\label{tab:test22}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 8} & \$t0 = 8 & \$t0 = 8 \\
+\texttt{srl \$t1, \$t0, 3} & \$t1 = 1 & \$t1 = 1 \\
+\texttt{addi \$t2, \$zero, -1} & \$t2 = 0xFFFFFFFF & \$t2 = 0xFFFFFFFF \\
+\texttt{srl \$t3, \$t2, 16} & \$t3 = 0x0000FFFF & \$t3 = 0x0000FFFF \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Memory Operations Tests}
+
+\begin{table}[H]
+\centering
+\caption{Test 4: Basic Load/Store Operations}
+\label{tab:test4}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 100} & \$t0 = 100 & \$t0 = 100 \\
+\texttt{addi \$t1, \$zero, 200} & \$t1 = 200 & \$t1 = 200 \\
+\texttt{sw \$t0, 0(\$zero)} & Mem[0] = 100 & Mem[0] = 100 \\
+\texttt{sw \$t1, 4(\$zero)} & Mem[4] = 200 & Mem[4] = 200 \\
+\texttt{lw \$t2, 0(\$zero)} & \$t2 = 100 & \$t2 = 100 \\
+\texttt{lw \$t3, 4(\$zero)} & \$t3 = 200 & \$t3 = 200 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 13: Sequential Memory Access}
+\label{tab:test13}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{sw \$t0, 0(\$zero)} & Mem[0] = 10 & Mem[0] = 10 \\
+\texttt{sw \$t1, 4(\$zero)} & Mem[4] = 20 & Mem[4] = 20 \\
+\texttt{sw \$t2, 8(\$zero)} & Mem[8] = 30 & Mem[8] = 30 \\
+\texttt{sw \$t3, 12(\$zero)} & Mem[12] = 40 & Mem[12] = 40 \\
+\texttt{sw \$t4, 16(\$zero)} & Mem[16] = 50 & Mem[16] = 50 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 16: Offset Addressing with Negative Offsets}
+\label{tab:test16}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 100} & \$t0 = 100 & \$t0 = 100 \\
+\texttt{addi \$t1, \$zero, 77} & \$t1 = 77 & \$t1 = 77 \\
+\texttt{sw \$t1, 0(\$t0)} & Mem[100] = 77 & Mem[100] = 77 \\
+\texttt{sw \$t1, 4(\$t0)} & Mem[104] = 77 & Mem[104] = 77 \\
+\texttt{sw \$t1, -4(\$t0)} & Mem[96] = 77 & Mem[96] = 77 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 29: Memory Sign Extension and Edge Cases}
+\label{tab:test29}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 0xBEEF} & 0xFFFFBEEF & 0xFFFFBEEF \\
+\texttt{sw \$t0, 0(\$zero)} & Mem[0]=0xFFFFBEEF & Mem[0]=0xFFFFBEEF \\
+\texttt{lw \$t1, 0(\$zero)} & 0xFFFFBEEF & 0xFFFFBEEF \\
+\texttt{sw \$t3, 100(\$zero)} & Mem[100] = 2 & Mem[100] = 2 \\
+\texttt{lw \$t4, 100(\$zero)} & \$t4 = 2 & \$t4 = 2 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Control Flow Tests}
+
+\begin{table}[H]
+\centering
+\caption{Test 5: Branch Equal (Taken)}
+\label{tab:test5}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 5} & \$t0 = 5 & \$t0 = 5 \\
+\texttt{addi \$t1, \$zero, 5} & \$t1 = 5 & \$t1 = 5 \\
+\texttt{beq \$t0, \$t1, target} & Branch taken & Branch taken \\
+\texttt{addi \$t0, \$zero, 88} & Skipped & Skipped \\
+\texttt{target: addi \$t0, \$zero, 99} & \$t0 = 99 & \$t0 = 99 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 6: Branch Equal (Not Taken)}
+\label{tab:test6}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 5} & \$t0 = 5 & \$t0 = 5 \\
+\texttt{addi \$t1, \$zero, 6} & \$t1 = 6 & \$t1 = 6 \\
+\texttt{beq \$t0, \$t1, target} & Not taken & Not taken \\
+\texttt{addi \$t2, \$zero, 77} & \$t2 = 77 & \$t2 = 77 \\
+\texttt{target: addi \$t2, \$zero, 88} & \$t2 = 88 & \$t2 = 88 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 7: Branch Not Equal}
+\label{tab:test7}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 5} & \$t0 = 5 & \$t0 = 5 \\
+\texttt{addi \$t1, \$zero, 6} & \$t1 = 6 & \$t1 = 6 \\
+\texttt{bne \$t0, \$t1, target} & Taken (5$\neq$6) & Taken \\
+\texttt{addi \$t3, \$zero, 99} & Skipped & Skipped \\
+\texttt{target: addi \$t3, \$zero, 111} & \$t3 = 111 & \$t3 = 111 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 23: Jump and Link (JAL)}
+\label{tab:test23}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{jal function} & \$ra = 0x4 & \$ra = 0x4 \\
+\texttt{j end} & Jump to end & Jump executed \\
+\texttt{function: addi \$t1, \$zero, 42} & \$t1 = 42 & \$t1 = 42 \\
+\texttt{j end} & Return to end & Return executed \\
+\texttt{end: addi \$t2, \$zero, 77} & \$t2 = 77 & \$t2 = 77 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 14: Loop Counter Implementation}
+\label{tab:test14}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 0} & counter = 0 & counter = 0 \\
+\texttt{addi \$t1, \$zero, 5} & limit = 5 & limit = 5 \\
+\texttt{loop: addi \$t0, \$t0, 1} & counter++ & Increments \\
+\texttt{slt \$t2, \$t0, \$t1} & compare & compare \\
+\texttt{bne \$t2, \$zero, loop} & Loop 5× & Loop 5× \\
+\textbf{Final Result} & \$t0 = 5 & \$t0 = 5 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Data Hazard Tests}
+\begin{table}[H]
+\centering
+\caption{Test 2: RAW Data Hazard with Forwarding}
+\label{tab:test2}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t1, \$zero, 10} & \$t1 = 10 & \$t1 = 10 \\
+\texttt{addi \$t2, \$zero, 10} & \$t2 = 10 & \$t2 = 10 \\
+\texttt{add \$t0, \$t1, \$t2} & \$t0 = 20 & \$t0 = 20 \\
+\texttt{add \$t3, \$t0, \$zero} & \$t3 = 20 (RAW) & \$t3 = 20 \\
+\hline
+\multicolumn{3}{|p{12cm}|}{\textit{Hazard: \$t0 used immediately after write - resolved via EX/MEM forwarding}} \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 3: Load-Use Hazard with Stall}
+\label{tab:test3}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 42} & \$t0 = 42 & \$t0 = 42 \\
+\texttt{sw \$t0, 0(\$zero)} & Mem[0] = 42 & Mem[0] = 42 \\
+\texttt{lw \$t1, 0(\$zero)} & \$t1 = 42 & \$t1 = 42 \\
+\texttt{add \$t2, \$t1, \$zero} & \$t2 = 42 & \$t2 = 42 \\
+\hline
+\multicolumn{3}{|p{12cm}|}{\textit{Hazard: Load-use requires 1-cycle stall before forwarding}} \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 17: Multiple Consecutive RAW Hazards}
+\label{tab:test17}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 10} & \$t0 = 10 & \$t0 = 10 \\
+\texttt{add \$t1, \$t0, \$t0} & \$t1 = 20 & \$t1 = 20 \\
+\texttt{add \$t2, \$t1, \$t1} & \$t2 = 40 & \$t2 = 40 \\
+\texttt{add \$t3, \$t2, \$t2} & \$t3 = 80 & \$t3 = 80 \\
+\hline
+\multicolumn{3}{|p{12cm}|}{\textit{Chain: each instruction depends on previous - all resolved via forwarding}} \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 26: Complex Pipeline Hazard Chains}
+\label{tab:test26}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 1} & \$t0 = 1 & \$t0 = 1 \\
+\texttt{add \$t1, \$t0, \$t0} & \$t1 = 2 & \$t1 = 2 \\
+\texttt{add \$t2, \$t1, \$t1} & \$t2 = 4 & \$t2 = 4 \\
+\texttt{add \$t3, \$t2, \$t2} & \$t3 = 8 & \$t3 = 8 \\
+\texttt{add \$t4, \$t3, \$t3} & \$t4 = 16 & \$t4 = 16 \\
+\texttt{add \$t7, \$t5, \$t6} & \$t7 = 5 & \$t7 = 5 \\
+\texttt{sub \$t8, \$t7, \$t5} & \$t8 = 3 & \$t8 = 3 \\
+\texttt{and \$t9, \$t8, \$t6} & \$t9 = 3 & \$t9 = 3 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Special Cases and Edge Tests}
+\begin{table}[H]
+\centering
+\caption{Test 10: Zero Register Immutability}
+\label{tab:test10}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$zero, \$zero, 100} & \$zero = 0 & \$zero = 0 \\
+\texttt{add \$t0, \$zero, \$zero} & \$t0 = 0 & \$t0 = 0 \\
+\hline
+\multicolumn{3}{|p{12cm}|}{\textit{Hardware constraint: \$zero register is hardwired to 0}} \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 15: Fibonacci Sequence Computation}
+\label{tab:test15}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+\texttt{addi \$t0, \$zero, 0} & fib(0) = 0 & 0 \\
+\texttt{addi \$t1, \$zero, 1} & fib(1) = 1 & 1 \\
+\texttt{add \$t2, \$t0, \$t1} & fib(2) = 1 & 1 \\
+\texttt{add \$t0, \$t1, \$t2} & fib(3) = 2 & 2 \\
+\texttt{add \$t1, \$t2, \$t0} & fib(4) = 3 & 3 \\
+\hline
+\multicolumn{3}{|p{12cm}|}{\textit{Memory: Mem[100..116] = [0, 1, 1, 2, 3]}} \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Test 20: Stress Test - Multiple Operations}
+\label{tab:test20}
+\small
+\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\hline
+\textbf{Operation Sequence} & \textbf{Expected} & \textbf{Actual} \\
+\hline
+Initialize \$s0..\$s4 = 1..5 & Sequential init & Correct \\
+\texttt{add \$s5, \$s0, \$s1} & \$s5 = 3 & \$s5 = 3 \\
+\texttt{add \$s6, \$s2, \$s3} & \$s6 = 7 & \$s6 = 7 \\
+\texttt{add \$s7, \$s4, \$s5} & \$s7 = 8 & \$s7 = 8 \\
+\texttt{sub \$t0, \$s6, \$s7} & \$t0 = -1 & \$t0 = -1 \\
+\texttt{and \$t1, \$s0, \$s1} & \$t1 = 0 & \$t1 = 0 \\
+\texttt{or \$t2, \$s2, \$s3} & \$t2 = 7 & \$t2 = 7 \\
+\texttt{xor \$t3, \$s4, \$s5} & \$t3 = 6 & \$t3 = 6 \\
+\hline
+\multicolumn{3}{|r|}{\textbf{Result: \textcolor{green}{PASS} \checkmark}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Integration Test Results Summary}
+
+\begin{table}[H]
+\centering
+\caption{Integration Test Results by Category}
+\label{tab:integration-test-summary}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Test Category} & \textbf{Tests} & \textbf{Passed} & \textbf{Status} \\
+\hline
+Arithmetic Operations & 1, 11, 12 & 3/3 & \textcolor{green}{\textbf{PASS}} \\
+Logical Operations & 8, 9, 24 & 3/3 & \textcolor{green}{\textbf{PASS}} \\
+Shift Operations & 21, 22 & 2/2 & \textcolor{green}{\textbf{PASS}} \\
+Memory Operations & 4, 13, 16, 25, 29 & 5/5 & \textcolor{green}{\textbf{PASS}} \\
+Control Flow & 5, 6, 7, 14, 19, 23, 27 & 7/7 & \textcolor{green}{\textbf{PASS}} \\
+Data Hazards & 2, 3, 17, 18, 26 & 5/5 & \textcolor{green}{\textbf{PASS}} \\
+Special Cases & 10, 15, 20, 28 & 4/4 & \textcolor{green}{\textbf{PASS}} \\
+\hline
+\textbf{Total Integration Tests} & \textbf{29} & \textbf{29/29} & \textcolor{green}{\textbf{100\%}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Complete Test Suite Summary}
+
+\begin{table}[H]
+\centering
+\caption{Total Test Coverage}
+\label{tab:total-tests}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Test Type} & \textbf{Count} & \textbf{Passed} & \textbf{Status} \\
+\hline
+Unit Tests (Component) & 76 & 76 & \textcolor{green}{\textbf{100\%}} \\
+Integration Tests (Pipeline) & 29 & 29 & \textcolor{green}{\textbf{100\%}} \\
+Assembler Tests & 20 & 20 & \textcolor{green}{\textbf{100\%}} \\
+\hline
+\textbf{Grand Total} & \textbf{125} & \textbf{125} & \textcolor{green}{\textbf{100\%}} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Key Validation Points}
+\label{sec:key-validation}
+
+\subsection{Hazard Resolution Success}
+The forwarding unit correctly handles all RAW hazards, as demonstrated in Tests 2, 17, and 26. Load-use hazards are properly managed with stalls (Test 3), and control hazards are resolved with correct branch prediction in the ID stage (Tests 5-7, 27).
+
+\subsection{Memory System Integrity}
+All memory operations maintain proper alignment (Test 25), with correct sign extension for load operations (Test 29). The data memory correctly handles sequential accesses (Test 13) and offset addressing (Test 16).
+
+\subsection{Control Flow Accuracy}
+Branch instructions (\texttt{beq}, \texttt{bne}) correctly evaluate conditions and redirect program flow (Tests 5-7, 19). Jump instructions (\texttt{j}, \texttt{jal}) properly update the program counter and save return addresses (Test 23).
+
+\subsection{Arithmetic and Logical Correctness}
+All ALU operations produce correct results, including edge cases for overflow (Test 12), negative numbers (Test 11), and logical operations with immediate values (Test 24).
+
+\section{Performance Metrics}
+\label{sec:performance-metrics}
+
+\begin{itemize}
+    \item \textbf{Test Coverage:} 100\% of implemented MIPS instruction subset
+    \item \textbf{Success Rate:} all tests passed (100\%)
+    \item \textbf{Hazard Detection:} 100\% accuracy in simulated scenarios
+    \item \textbf{Forwarding Efficiency:} Correct forwarding in all applicable cases
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:testing-conclusion}
+
+The test suite validates that the MIPS pipeline simulator correctly implements:
+\begin{itemize}
+    \item All supported arithmetic and logical operations
+    \item Complete memory subsystem with proper alignment
+    \item Full hazard detection and forwarding
+    \item Accurate control flow handling
+    \item Edge case behavior, including overflow and negative numbers
+\end{itemize}
+
+The 100\% pass rate across diverse test cases demonstrates the robustness and correctness of the implementation. Each component functions correctly in isolation and integrates properly within the pipeline, confirming that the design specifications are successfully met.
+
 \printbibliography
 \nocite{*}
 
@@ -1147,5 +2158,7 @@ This design ensures that the frontend receives meaningful error messages and can
   Distributed systems (DS)\\
   \includegraphics[width=10cm]{fig/footer}
 \end{center}
+
+
 
 \end{document}
