@@ -21,12 +21,13 @@ public class ExecuteStage implements PipelineStage {
         int readData1 = regs.ID_EX.getReadData1();
         int readData2 = regs.ID_EX.getReadData2();
         int signExtendedImm = regs.ID_EX.getSignExtendedImm();
+        int pcPlus4 = regs.ID_EX.getPcPlus4();
 
         ForwardingUnit.ForwardingResult forwarding = forwardingUnit.determineForwarding(regs);
 
-        System.out.println("Forwarding: forwardA=" + forwarding.forwardA + ", forwardB=" + forwarding.forwardB);
-        System.out.println("MEM_WB.writeData=" + regs.MEM_WB.getWriteData());
-        System.out.println("EX_MEM.aluResult=" + regs.EX_MEM.getAluResult());
+        // System.out.println("Forwarding: forwardA=" + forwarding.forwardA + ", forwardB=" + forwarding.forwardB);
+        // System.out.println("MEM_WB.writeData=" + regs.MEM_WB.getWriteData());
+        // System.out.println("EX_MEM.aluResult=" + regs.EX_MEM.getAluResult());
 
         boolean isShift = false;
         int shamt = 0;
@@ -52,26 +53,23 @@ public class ExecuteStage implements PipelineStage {
         }
 
         // ALU input B
-        int aluInputBValue;
-        if (!regs.ID_EX.isAluSrc()) {
-            if (forwarding.forwardB == 2) {
-                aluInputBValue = regs.EX_MEM.getAluResult();
-            } else if (forwarding.forwardB == 1) {
-                aluInputBValue = regs.MEM_WB.getWriteData();
-            } else {
-                aluInputBValue = readData2;
-            }
+        int aluInputB;
+        if (regs.ID_EX.isAluSrc()) {
+            aluInputB = signExtendedImm;
+        } else if (forwarding.forwardB == 2) {
+            aluInputB = regs.EX_MEM.getAluResult();
+        } else if (forwarding.forwardB == 1) {
+            aluInputB = regs.MEM_WB.getWriteData();
         } else {
-            aluInputBValue = signExtendedImm;
+            aluInputB = readData2;
         }
-        int aluInputB = regs.ID_EX.isAluSrc() ? signExtendedImm : aluInputBValue;
 
         // ALU operation
         int aluResult = 0;
         boolean zeroFlag = false;
         int aluOp = regs.ID_EX.getAluOp();
 
-        System.out.println("A= " + aluInputA + " B= " + aluInputB);
+        // System.out.println("A= " + aluInputA + " B= " + aluInputB);
 
         if (aluOp == 0) {
             aluResult = aluInputA + aluInputB;
@@ -103,7 +101,28 @@ public class ExecuteStage implements PipelineStage {
         }
 
         int destReg = regs.ID_EX.isRegDst() ? regs.ID_EX.getRd() : regs.ID_EX.getRt();
-        System.out.println("EX Stage: opcode=" + instr.getOpcode() + ", RegDst=" + regs.ID_EX.isRegDst() + ", destReg=" + destReg);
+        // System.out.println("EX Stage: opcode=" + instr.getOpcode() + ", RegDst=" + regs.ID_EX.isRegDst() + ", destReg=" + destReg);
+
+        // branch
+        int branchTarget = pcPlus4 + (signExtendedImm << 2);
+        //boolean branchTaken = regs.ID_EX.isBranch() && zeroFlag;
+        boolean branchTaken = false;
+        if (regs.ID_EX.isBranch()) {
+            switch(instr.getOpcode()) {
+                case 0x04:
+                    branchTaken = zeroFlag;
+                    break;
+                case 0x05:
+                    branchTaken = !zeroFlag;
+                    break;
+                default:
+                    branchTaken = false;
+            }
+        }
+
+        if (branchTaken) {
+            cpuState.setPC(branchTarget);
+        }
 
         // store - write data
         int writeDataForStore;
@@ -118,10 +137,12 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setAluResult(aluResult);
         regs.EX_MEM.setZeroFlag(zeroFlag);
         regs.EX_MEM.setWriteData(writeDataForStore);
+        regs.EX_MEM.setBranchTarget(branchTarget);
+        regs.EX_MEM.setBranchTaken(branchTaken);
         regs.EX_MEM.setDestReg(destReg);
         regs.EX_MEM.setRegWrite(regs.ID_EX.isRegWrite());
         regs.EX_MEM.setMemToReg(regs.ID_EX.isMemToReg());
-        regs.EX_MEM.setBranch(false);
+        regs.EX_MEM.setBranch(regs.ID_EX.isBranch());
         regs.EX_MEM.setMemRead(regs.ID_EX.isMemRead());
         regs.EX_MEM.setMemWrite(regs.ID_EX.isMemWrite());
         regs.EX_MEM.setInstruction(instr.copy());
@@ -133,6 +154,8 @@ public class ExecuteStage implements PipelineStage {
         regs.EX_MEM.setAluResult(0);
         regs.EX_MEM.setZeroFlag(false);
         regs.EX_MEM.setWriteData(0);
+        regs.EX_MEM.setBranchTarget(0);
+        regs.EX_MEM.setBranchTaken(false);
         regs.EX_MEM.setDestReg(0);
         regs.EX_MEM.setRegWrite(false);
         regs.EX_MEM.setMemToReg(false);

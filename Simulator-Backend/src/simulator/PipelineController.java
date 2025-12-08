@@ -53,7 +53,7 @@ public class PipelineController {
             decode.process(cpuState, pipelineRegisters);
         }
 
-        if (stallControl.pcWrite) {
+        if (!branchFlushedThisCycle && stallControl.pcWrite) {
             fetch.process(cpuState, pipelineRegisters);
         }
 

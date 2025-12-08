@@ -1,7 +1,6 @@
 package model.pipeline.stages;
 
 import model.control.ControlUnit;
-import model.control.ForwardingUnit;
 import model.instruction.Instruction;
 import model.instruction.ITypeInstruction;
 import model.instruction.JTypeInstruction;
@@ -38,36 +37,10 @@ public class DecodeStage implements PipelineStage {
             signExtendedImm = iInstr.getImmediate();
         }
 
-        int readData1 = getRegisterValueWithForwarding(cpuState, regs, rs);
-        int readData2 = getRegisterValueWithForwarding(cpuState, regs, rt);
+        int readData1 = cpuState.registerFile.get(rs);
+        int readData2 = cpuState.registerFile.get(rt);
 
         controlUnit.generateSignals(instr.getOpcode());
-
-        if (controlUnit.isBranch()) {
-            boolean branchTaken = false;
-            int opcode = instr.getOpcode();
-
-            if (opcode == 0x04) { // beq
-                branchTaken = (readData1 == readData2);
-            } else if (opcode == 0x05) { // bne
-                branchTaken = (readData1 != readData2);
-            }
-
-            if (branchTaken) {
-                int pcPlus4 = regs.IF_ID.getPC();
-                int branchTarget = pcPlus4 + (signExtendedImm << 2);
-
-                System.out.println("BRANCH TAKEN in ID stage! PC=" + cpuState.pc.get() +
-                        " -> " + branchTarget + " (offset: " + signExtendedImm + ")");
-
-                cpuState.pc.set(branchTarget);
-
-                regs.IF_ID.set(null, 0);
-
-                clearID_EX(regs);
-                return;
-            }
-        }
 
         if (controlUnit.isJump() && instr instanceof JTypeInstruction) {
             JTypeInstruction jInstr = (JTypeInstruction) instr;
@@ -77,14 +50,10 @@ public class DecodeStage implements PipelineStage {
             if (instr.getOpcode() == 0x02) { // j
                 cpuState.pc.set(targetAddress);
                 regs.IF_ID.set(null, 0);
-                clearID_EX(regs);
-                return;
             } else if (instr.getOpcode() == 0x03) { // jal
                 cpuState.registerFile.set(31, regs.IF_ID.getPC());
                 cpuState.pc.set(targetAddress);
                 regs.IF_ID.set(null, 0);
-                clearID_EX(regs);
-                return;
             }
         }
 
@@ -105,22 +74,6 @@ public class DecodeStage implements PipelineStage {
         regs.ID_EX.setAluSrc(controlUnit.isAluSrc());
         regs.ID_EX.setAluOp(controlUnit.getAluOp());
         regs.ID_EX.setInstruction(instr.copy());
-    }
-
-    private int getRegisterValueWithForwarding(CPUState cpuState, PipelineRegisters regs, int regNum) {
-        if (regNum == 0) {
-            return 0;
-        }
-
-        if (regs.EX_MEM.isRegWrite() && regs.EX_MEM.getDestReg() == regNum) {
-            return regs.EX_MEM.getAluResult();
-        }
-
-        if (regs.MEM_WB.isRegWrite() && regs.MEM_WB.getDestReg() == regNum) {
-            return regs.MEM_WB.getWriteData();
-        }
-
-        return cpuState.registerFile.get(regNum);
     }
 
     private void clearID_EX(PipelineRegisters regs) {

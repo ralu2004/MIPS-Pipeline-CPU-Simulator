@@ -16,10 +16,17 @@ public class ITypeInstruction extends Instruction {
     @Override
     public void decodeFields() {
         int binary = getBinary();
+        int opcode = getOpcode();
         rs = (binary >> 21) & 0x1F;
         rt = (binary >> 16) & 0x1F;
         immediate = binary & 0xFFFF;
-        if ((immediate & 0x8000) != 0) immediate |= 0xFFFF0000; // sign-extend
+        
+        // ORI (0x0D) and ANDI (0x0C) use zero-extension
+        // All other I-type instructions use sign-extension
+        boolean zeroExtend = (opcode == 0x0D || opcode == 0x0C);
+        if (!zeroExtend && (immediate & 0x8000) != 0) {
+            immediate |= 0xFFFF0000; // sign-extend
+        }
     }
 
     @Override

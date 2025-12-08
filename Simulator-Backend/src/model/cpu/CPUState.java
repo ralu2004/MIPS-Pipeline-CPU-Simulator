@@ -12,4 +12,7 @@ public class CPUState {
     public CPUState(InstructionMemory instrMem) {
         this.instructionMemory = instrMem;
     }
+    public void setPC(int target) {
+        this.pc.set(target);
+    }
 }
