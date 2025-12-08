@@ -2,12 +2,12 @@ export const SAMPLE_PROGRAMS = {
   'Simple ADD': {
     code: 'addi $t0, $zero, 5\naddi $t1, $t0, 3\nadd $t2, $t0, $t1',
     description: 'Basic arithmetic operations',
-    expectedResults: 'Expected: $t0=5, $t1=3, $t2=8'
+    expectedResults: 'Expected: $t0=5, $t1=8, $t2=13'
   },
   'Arithmetic Demo': {
     code: 'addi $t0, $zero, 10\naddi $t1, $zero, 20\nadd $t2, $t0, $t1\nsub $t3, $t0, $t1\nand $t4, $t1, $t2\nor $t5, $t1, $t3',
     description: 'Complete arithmetic operations',
-    expectedResults: 'Expected: $t2=30, $t3=-10, $t4=20, $t5=20'
+    expectedResults: 'Expected: $t2=30, $t3=-10, $t4=20, $t5=-10'
   },
   'Memory Operations': {
     code: 'addi $t0, $zero, 100\naddi $t1, $zero, 200\nsw $t0, 0($zero)\nsw $t1, 4($zero)\nlw $t2, 0($zero)\nlw $t3, 4($zero)\nadd $t4, $t2, $t3\nsw $t4, 8($zero)',
@@ -17,7 +17,7 @@ export const SAMPLE_PROGRAMS = {
   'Branch Test': {
     code: 'addi $t0, $zero, 15\naddi $t1, $zero, 15\nadd $t2, $t0, $t1\nbeq $t0, $t1, 2\nsub $t3, $t0, $t2\nand $t5, $t1, $t2',
     description: 'Conditional branching with arithmetic',
-    expectedResults: 'Expected: Branch TAKEN, $t2=30, $t3=-15, $t5=14'
+    expectedResults: 'Expected: Branch TAKEN, $t2=30, $t3=0, $t5=0'
   }/*,
   'Data Hazard Demo': {
     code: '20080007\n20090009\n01095020\n00625820\n014b6020\n018c7020',
