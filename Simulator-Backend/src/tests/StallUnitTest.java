@@ -23,13 +23,11 @@ class StallUnitTest {
 
     @Test
     void testDetectsLoadUseHazard() {
-        // Simulate load instruction in EX stage (ID_EX)
         ITypeInstruction lwInstr = new ITypeInstruction(0x23, 0x8C220000); // lw $2, 0($1)
         regs.ID_EX.setInstruction(lwInstr);
         regs.ID_EX.setMemRead(true);
-        regs.ID_EX.setRt(2); // destination register for load
+        regs.ID_EX.setRt(2);
 
-        // Simulate dependent instruction in ID stage (IF_ID)
         RTypeInstruction addInstr = new RTypeInstruction(0x00, 0x00422020); // add $4, $2, $2
         regs.IF_ID.set(addInstr, 0);
 
@@ -44,13 +42,11 @@ class StallUnitTest {
 
     @Test
     void testNoStallWhenNoHazard() {
-        // Load instruction in EX stage
         ITypeInstruction lwInstr = new ITypeInstruction(0x23, 0x8C220000); // lw $2, 0($1)
         regs.ID_EX.setInstruction(lwInstr);
         regs.ID_EX.setMemRead(true);
         regs.ID_EX.setRt(2);
 
-        // Non-dependent instruction in ID stage (different registers)
         RTypeInstruction addInstr = new RTypeInstruction(0x00, 0x00843020); // add $6, $4, $3
         regs.IF_ID.set(addInstr, 0);
 
@@ -65,7 +61,6 @@ class StallUnitTest {
 
     @Test
     void testControlSignalsResetAfterNoHazard() {
-        // create a hazard
         ITypeInstruction lwInstr = new ITypeInstruction(0x23, 0x8C220000);
         regs.ID_EX.setInstruction(lwInstr);
         regs.ID_EX.setMemRead(true);
@@ -73,7 +68,6 @@ class StallUnitTest {
         regs.IF_ID.set(new RTypeInstruction(0x00, 0x00422020), 0);
         stallUnit.detectStall(regs);
 
-        // remove the hazard
         regs.ID_EX.setMemRead(false);
         regs.IF_ID.set(null, 0);
 

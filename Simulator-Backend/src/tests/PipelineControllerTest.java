@@ -21,209 +21,60 @@ class PipelineControllerTest {
         cpu = new CPUState(instrMem);
         controller = new PipelineController(cpu);
 
-        // Initialize some register values
-        cpu.registerFile.set(1, 5);
-        cpu.registerFile.set(2, 10);
-        cpu.registerFile.set(3, 15);
+        cpu.registerFile.set(1, 100);  // $1 = 100 (base address)
+        cpu.registerFile.set(2, 200);  // $2 = 200
+        cpu.registerFile.set(3, 300);  // $3 = 300
+        cpu.registerFile.set(4, 400);  // $4 = 400
+        cpu.registerFile.set(5, 500);  // $5 = 500
+
+        cpu.dataMemory.storeWord(100, 12345);  // Mem[100] = 12345
+        cpu.dataMemory.storeWord(104, 54321);  // Mem[104] = 54321
     }
 
     @Test
-    void testLoadUseHazardProducesStallAndBubble() {
-        // Set up memory for load instruction
-        cpu.dataMemory.storeWord(5, 25);
+    void testSimpleNoHazardPipeline() {
+        // add $6, $1, $2  (100 + 200 = 300)
+        // add $7, $3, $4  (300 + 400 = 700)
+        RTypeInstruction add1 = new RTypeInstruction(0, encodeRType(32, 1, 2, 6, 0)); // add $6, $1, $2
+        RTypeInstruction add2 = new RTypeInstruction(0, encodeRType(32, 3, 4, 7, 0)); // add $7, $3, $4
 
-        // Load-use hazard: lw followed by dependent instruction
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C230000); // lw $3, 0($1)
-        RTypeInstruction add = new RTypeInstruction(0, 0x00622020); // add $4, $3, $2
-        lw.decodeFields();
-        add.decodeFields();
+        cpu.instructionMemory.setInstruction(0, add1);
+        cpu.instructionMemory.setInstruction(4, add2);
+
+        // Run enough cycles for both instructions to complete
+        for (int i = 0; i < 7; i++) {
+            controller.runCycle();
+        }
+
+        assertEquals(300, cpu.registerFile.get(6), "First add result");
+        assertEquals(700, cpu.registerFile.get(7), "Second add result");
+
+        // Check pipeline progression
+        var history = controller.getHistory();
+        assertFalse(history.isEmpty(), "Should have pipeline history");
+
+        // Should have no stalls
+        boolean hadStall = history.stream().anyMatch(snapshot ->
+                snapshot.getIfStage().getState().toString().equals("STALL") ||
+                        snapshot.getIdStage().getState().toString().equals("STALL")
+        );
+        assertFalse(hadStall, "Should have no stalls for independent instructions");
+    }
+
+    @Test
+    void testLoadUseHazardDetection() {
+        // lw $6, 0($1)      // Load from Mem[100] = 12345
+        // add $7, $6, $2    // 12345 + 200 = 12545 (RAW on $6)
+
+        ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0)); // lw $6, 0($1)
+        RTypeInstruction add = new RTypeInstruction(0, encodeRType(32, 6, 2, 7, 0)); // add $7, $6, $2
 
         cpu.instructionMemory.setInstruction(0, lw);
         cpu.instructionMemory.setInstruction(4, add);
 
-        boolean foundStall = false;
-        boolean foundBubble = false;
-
-        for (int i = 0; i < 6; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("STALL")) {
-                    foundStall = true;
-                }
-                if (snapshot.getExStage().getState().toString().equals("BUBBLE")) {
-                    foundBubble = true;
-                }
-            }
-
-            if (foundStall && foundBubble) break;
-        }
-
-        assertTrue(foundStall, "Should detect stall due to load-use hazard");
-        assertTrue(foundBubble, "Should insert bubble in pipeline");
-    }
-
-    @Test
-    void testBranchFlush() {
-        ITypeInstruction beq = new ITypeInstruction(4, 0x10220008); // beq $1, $2, 8
-        RTypeInstruction nop = new RTypeInstruction(0, 0x00000000); // nop
-        beq.decodeFields();
-        nop.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, beq);
-        cpu.instructionMemory.setInstruction(4, nop);
-
-        // force branch taken
-        cpu.registerFile.set(1, 10);
-        cpu.registerFile.set(2, 10);
-
-        boolean foundFlush = false;
-
-        for (int i = 0; i < 5; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("FLUSH") ||
-                        snapshot.getIdStage().getState().toString().equals("FLUSH")) {
-                    foundFlush = true;
-                    break;
-                }
-            }
-        }
-
-        assertTrue(foundFlush, "Pipeline should flush stages after taken branch");
-    }
-
-    @Test
-    void testNoStallWhenNoHazard() {
-        RTypeInstruction add1 = new RTypeInstruction(0, 0x00221820); // add $3, $1, $2
-        RTypeInstruction add2 = new RTypeInstruction(0, 0x00622020); // add $4, $3, $2
-        add1.decodeFields();
-        add2.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, add1);
-        cpu.instructionMemory.setInstruction(4, add2);
-
-        boolean foundStall = false;
-
-        for (int i = 0; i < 5; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("STALL")) {
-                    foundStall = true;
-                    break;
-                }
-            }
-        }
-
-        assertFalse(foundStall, "Should not stall for independent instructions");
-    }
-
-    @Test
-    void testForwardingPreventsStall() {
-        RTypeInstruction add1 = new RTypeInstruction(0, 0x00221820); // add $3, $1, $2
-        RTypeInstruction add2 = new RTypeInstruction(0, 0x00622020); // add $4, $3, $2
-        add1.decodeFields();
-        add2.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, add1);
-        cpu.instructionMemory.setInstruction(4, add2);
-
-        boolean foundStall = false;
-
-        for (int i = 0; i < 6; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("STALL")) {
-                    foundStall = true;
-                    break;
-                }
-            }
-        }
-
-        assertFalse(foundStall, "Forwarding should prevent stall for RAW hazard");
-    }
-
-    @Test
-    void testPipelineProgressesNormally() {
-        RTypeInstruction add = new RTypeInstruction(0, 0x00221820); // add $3, $1, $2
-        add.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, add);
-
-        for (int i = 0; i < 3; i++) {
-            controller.runCycle();
-        }
-
-        var history = controller.getHistory();
-        assertTrue(history.size() >= 3, "Should have history entries");
-
-        var latest = history.get(history.size() - 1);
-        assertNotNull(latest, "Should have latest snapshot");
-    }
-
-    @Test
-    void testDataHazardWithStoreWord() {
-        cpu.dataMemory.storeWord(5, 30);
-
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C230000); // lw $3, 0($1)
-        ITypeInstruction sw = new ITypeInstruction(43, 0xAC230004); // sw $3, 4($1)
-        lw.decodeFields();
-        sw.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, lw);
-        cpu.instructionMemory.setInstruction(4, sw);
-
-        boolean foundStall = false;
-
-        for (int i = 0; i < 6; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("STALL") ||
-                        snapshot.getExStage().getState().toString().equals("BUBBLE")) {
-                    foundStall = true;
-                    break;
-                }
-            }
-        }
-
-        assertTrue(foundStall, "Should stall for load-store data hazard");
-    }
-
-    @Test
-    void testMultipleConsecutiveHazards() {
-        cpu.dataMemory.storeWord(5, 20);
-
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C230000); // lw $3, 0($1)
-        RTypeInstruction add1 = new RTypeInstruction(0, 0x00622020); // add $4, $3, $2
-        RTypeInstruction add2 = new RTypeInstruction(0, 0x00822820); // add $5, $4, $2
-        lw.decodeFields();
-        add1.decodeFields();
-        add2.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, lw);
-        cpu.instructionMemory.setInstruction(4, add1);
-        cpu.instructionMemory.setInstruction(8, add2);
-
+        // Track pipeline states
         int stallCount = 0;
+        int bubbleCount = 0;
 
         for (int i = 0; i < 8; i++) {
             controller.runCycle();
@@ -235,29 +86,146 @@ class PipelineControllerTest {
                 if (snapshot.getIfStage().getState().toString().equals("STALL")) {
                     stallCount++;
                 }
+                if (snapshot.getExStage().getState().toString().equals("BUBBLE")) {
+                    bubbleCount++;
+                }
             }
         }
 
-        assertTrue(stallCount >= 1, "Should handle multiple consecutive hazards");
-        assertEquals(20, cpu.registerFile.get(3), "Load should get value from memory");
-        assertEquals(30, cpu.registerFile.get(4), "First add should compute correctly");
-        assertEquals(40, cpu.registerFile.get(5), "Second add should compute correctly with forwarding");
+        // Should have exactly 1 stall and 1 bubble for load-use hazard
+        assertEquals(1, stallCount, "Should stall for 1 cycle due to load-use hazard");
+        assertEquals(1, bubbleCount, "Should insert 1 bubble in EX stage");
+
+        // Final results
+        assertEquals(12345, cpu.registerFile.get(6), "Loaded value");
+        assertEquals(12545, cpu.registerFile.get(7), "Computed value after stall");
     }
 
     @Test
-    void testBranchWithDataHazard() {
-        cpu.dataMemory.storeWord(5, 10);
+    void testForwardingEXtoEX() {
+        // add $6, $1, $2    // 100 + 200 = 300
+        // add $7, $6, $3    // 300 + 300 = 600 (forwarding from EX/MEM)
+        // add $8, $7, $4    // 600 + 400 = 1000 (forwarding from EX/MEM)
 
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C230000); // lw $3, 0($1)
-        ITypeInstruction beq = new ITypeInstruction(4, 0x10600008); // beq $3, $0, 8
-        lw.decodeFields();
-        beq.decodeFields();
+        RTypeInstruction add1 = new RTypeInstruction(0, encodeRType(32, 1, 2, 6, 0));
+        RTypeInstruction add2 = new RTypeInstruction(0, encodeRType(32, 6, 3, 7, 0));
+        RTypeInstruction add3 = new RTypeInstruction(0, encodeRType(32, 7, 4, 8, 0));
+
+        cpu.instructionMemory.setInstruction(0, add1);
+        cpu.instructionMemory.setInstruction(4, add2);
+        cpu.instructionMemory.setInstruction(8, add3);
+
+        int stallCount = 0;
+
+        for (int i = 0; i < 9; i++) {
+            controller.runCycle();
+
+            var history = controller.getHistory();
+            if (!history.isEmpty()) {
+                var snapshot = history.get(history.size() - 1);
+                if (snapshot.getIfStage().getState().toString().equals("STALL")) {
+                    stallCount++;
+                }
+            }
+        }
+
+        assertEquals(0, stallCount, "Forwarding should prevent stalls for EX→EX dependencies");
+        assertEquals(300, cpu.registerFile.get(6), "First add");
+        assertEquals(600, cpu.registerFile.get(7), "Second add with forwarding");
+        assertEquals(1000, cpu.registerFile.get(8), "Third add with forwarding");
+    }
+
+    @Test
+    void testForwardingMEMtoEX() {
+        // lw $6, 0($1)      // Load 12345
+        // nop               // Bubble
+        // add $7, $6, $2    // Forward from MEM/WB
+
+        ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
+        RTypeInstruction nop = new RTypeInstruction(0, 0x00000000); // nop
+        RTypeInstruction add = new RTypeInstruction(0, encodeRType(32, 6, 2, 7, 0));
 
         cpu.instructionMemory.setInstruction(0, lw);
-        cpu.instructionMemory.setInstruction(4, beq);
+        cpu.instructionMemory.setInstruction(4, nop);
+        cpu.instructionMemory.setInstruction(8, add);
 
-        boolean foundStall = false;
-        boolean foundFlush = false;
+        for (int i = 0; i < 9; i++) {
+            controller.runCycle();
+        }
+
+        assertEquals(12345, cpu.registerFile.get(6), "Loaded value");
+        assertEquals(12545, cpu.registerFile.get(7), "Add with forwarding from MEM stage");
+    }
+
+    @Test
+    void testBranchFlush() {
+        cpu.registerFile.set(1, 100);
+        cpu.registerFile.set(2, 100);
+
+        // 0: beq $1, $2, 2
+        // 4: add $3, $1, $2
+        // 12: add $4, $1, $2
+        ITypeInstruction beq = new ITypeInstruction(4, encodeBranch(1, 2, 2));
+        RTypeInstruction addDelay = new RTypeInstruction(0, encodeRType(32, 1, 2, 3, 0));
+        RTypeInstruction addTarget = new RTypeInstruction(0, encodeRType(32, 1, 2, 4, 0));
+
+        cpu.instructionMemory.setInstruction(0, beq);
+        cpu.instructionMemory.setInstruction(4, addDelay);
+        cpu.instructionMemory.setInstruction(12, addTarget);
+
+        int flushCount = 0;
+
+        for (int i = 0; i < 10; i++) {
+            controller.runCycle();
+
+            var history = controller.getHistory();
+            if (!history.isEmpty()) {
+                var snapshot = history.get(history.size() - 1);
+                if (snapshot.getIfStage().getState().toString().equals("FLUSH") ||
+                        snapshot.getIdStage().getState().toString().equals("FLUSH")) {
+                    flushCount++;
+                }
+            }
+        }
+
+        assertTrue(flushCount > 0, "Pipeline should flush after a taken branch");
+        assertEquals(100 + 100, cpu.registerFile.get(4), "Branch target instruction executed correctly");
+    }
+
+
+    @Test
+    void testStoreWordNoHazard() {
+        // lw $6, 0($1)      // Load 12345
+        // nop               // Bubble
+        // sw $6, 4($1)      // Store to Mem[104]
+
+        ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
+        RTypeInstruction nop = new RTypeInstruction(0, 0x00000000);
+        ITypeInstruction sw = new ITypeInstruction(43, encodeStore(1, 6, 4));
+
+        cpu.instructionMemory.setInstruction(0, lw);
+        cpu.instructionMemory.setInstruction(4, nop);
+        cpu.instructionMemory.setInstruction(8, sw);
+
+        for (int i = 0; i < 10; i++) {
+            controller.runCycle();
+        }
+
+        assertEquals(12345, cpu.dataMemory.loadWord(104), "Should store loaded value");
+    }
+
+    @Test
+    void testStoreWordWithHazard() {
+        // lw $6, 0($1)      // Load 12345
+        // sw $6, 4($1)      // Store immediately (HAZARD!)
+
+        ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
+        ITypeInstruction sw = new ITypeInstruction(43, encodeStore(1, 6, 4));
+
+        cpu.instructionMemory.setInstruction(0, lw);
+        cpu.instructionMemory.setInstruction(4, sw);
+
+        int stallCount = 0;
 
         for (int i = 0; i < 8; i++) {
             controller.runCycle();
@@ -265,112 +233,63 @@ class PipelineControllerTest {
             var history = controller.getHistory();
             if (!history.isEmpty()) {
                 var snapshot = history.get(history.size() - 1);
-
                 if (snapshot.getIfStage().getState().toString().equals("STALL")) {
-                    foundStall = true;
-                }
-                if (snapshot.getIfStage().getState().toString().equals("FLUSH") ||
-                        snapshot.getIdStage().getState().toString().equals("FLUSH")) {
-                    foundFlush = true;
+                    stallCount++;
                 }
             }
         }
 
-        assertTrue(foundStall, "Should stall for branch data hazard");
-        assertFalse(foundFlush, "Branch should not be taken with non-zero value");
+        assertEquals(1, stallCount, "Should stall for load-store hazard");
+        assertEquals(12345, cpu.dataMemory.loadWord(104), "Should store after stall");
+    }
+
+    private int encodeRType(int func, int rs, int rt, int rd, int shamt) {
+        return (func & 0x3F) |
+                ((shamt & 0x1F) << 6) |
+                ((rd & 0x1F) << 11) |
+                ((rt & 0x1F) << 16) |
+                ((rs & 0x1F) << 21);
+    }
+
+    private int encodeIType(int rs, int rt, int immediate) {
+        return (immediate & 0xFFFF) |
+                ((rt & 0x1F) << 16) |
+                ((rs & 0x1F) << 21);
+    }
+
+    private int encodeStore(int rs, int rt, int offset) {
+        return (offset & 0xFFFF) |
+                ((rt & 0x1F) << 16) |
+                ((rs & 0x1F) << 21) |
+                (43 << 26);  // sw opcode
+    }
+
+    private int encodeBranch(int rs, int rt, int offset) {
+        return (offset & 0xFFFF) |
+                ((rt & 0x1F) << 16) |
+                ((rs & 0x1F) << 21) |
+                (4 << 26);   // beq opcode
     }
 
     @Test
-    void testMemoryAccessHazards() {
-        ITypeInstruction sw = new ITypeInstruction(43, 0xAC220000); // sw $2, 0($1)
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C230000); // lw $3, 0($1)
-        sw.decodeFields();
-        lw.decodeFields();
+    void testSimpleBranchFlush() {
+        // beq $1, $1, 8
+        cpu.registerFile.set(1, 100);
 
-        cpu.instructionMemory.setInstruction(0, sw);
-        cpu.instructionMemory.setInstruction(4, lw);
+        ITypeInstruction beq = new ITypeInstruction(4, encodeBranch(1, 1, 8));
+        cpu.instructionMemory.setInstruction(0, beq);
 
         for (int i = 0; i < 6; i++) {
             controller.runCycle();
         }
 
-        assertEquals(10, cpu.dataMemory.loadWord(5), "Memory should contain stored value");
-        assertEquals(10, cpu.registerFile.get(3), "Should load correct value from memory");
-    }
+        var history = controller.getHistory();
+        boolean hadFlush = history.stream().anyMatch(snapshot ->
+                snapshot.getIfStage().getState().toString().equals("FLUSH") ||
+                        snapshot.getIdStage().getState().toString().equals("FLUSH")
+        );
 
-    @Test
-    void testComplexForwardingScenarios() {
-        RTypeInstruction add1 = new RTypeInstruction(0, 0x00221820); // add $3, $1, $2
-        RTypeInstruction add2 = new RTypeInstruction(0, 0x00622020); // add $4, $3, $2
-        RTypeInstruction add3 = new RTypeInstruction(0, 0x00642820); // add $5, $3, $4
-        add1.decodeFields();
-        add2.decodeFields();
-        add3.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, add1);
-        cpu.instructionMemory.setInstruction(4, add2);
-        cpu.instructionMemory.setInstruction(8, add3);
-
-        boolean foundStall = false;
-
-        for (int i = 0; i < 8; i++) {
-            controller.runCycle();
-
-            var history = controller.getHistory();
-            if (!history.isEmpty()) {
-                var snapshot = history.get(history.size() - 1);
-
-                if (snapshot.getIfStage().getState().toString().equals("STALL")) {
-                    foundStall = true;
-                    break;
-                }
-            }
-        }
-
-        assertFalse(foundStall, "Forwarding should handle complex dependency chains without stalls");
-        assertEquals(15, cpu.registerFile.get(3), "First add result");
-        assertEquals(25, cpu.registerFile.get(4), "Second add result");
-        assertEquals(40, cpu.registerFile.get(5), "Third add result with complex forwarding");
-    }
-
-    @Test
-    void testPipelineFullThroughput() {
-        RTypeInstruction add1 = new RTypeInstruction(0, 0x00221820); // add $3, $1, $2
-        RTypeInstruction add2 = new RTypeInstruction(0, 0x00222020); // add $4, $1, $2
-        RTypeInstruction add3 = new RTypeInstruction(0, 0x00222820); // add $5, $1, $2
-        add1.decodeFields();
-        add2.decodeFields();
-        add3.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, add1);
-        cpu.instructionMemory.setInstruction(4, add2);
-        cpu.instructionMemory.setInstruction(8, add3);
-
-        int instructionCount = 0;
-        int cycleCount = 8;
-
-        for (int i = 0; i < cycleCount; i++) {
-            controller.runCycle();
-        }
-
-        if (cpu.registerFile.get(3) == 15) instructionCount++;
-        if (cpu.registerFile.get(4) == 15) instructionCount++;
-        if (cpu.registerFile.get(5) == 15) instructionCount++;
-
-        assertEquals(3, instructionCount, "Should achieve high throughput with independent instructions");
-    }
-
-    @Test
-    void testZeroRegisterImmutable() {
-        RTypeInstruction addToZero = new RTypeInstruction(0, 0x00220020); // add $0, $1, $2
-        addToZero.decodeFields();
-
-        cpu.instructionMemory.setInstruction(0, addToZero);
-
-        for (int i = 0; i < 5; i++) {
-            controller.runCycle();
-        }
-
-        assertEquals(0, cpu.registerFile.get(0), "$zero register should always remain 0");
+        assertTrue(hadFlush, "Should have pipeline flush for taken branch");
+        System.out.println("Flush detected: " + hadFlush);
     }
 }

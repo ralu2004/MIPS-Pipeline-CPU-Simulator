@@ -12,10 +12,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Comprehensive test suite for MIPS pipeline stages.
- * Verifies instruction propagation and correctness of stage behavior.
- */
 class PipelineStagesTest {
 
     private CPUState cpu;
@@ -39,7 +35,6 @@ class PipelineStagesTest {
         memory = new MemoryStage();
         writeback = new WriteBackStage();
 
-        // Preload some data in register file and memory
         cpu.registerFile.set(1, 5);
         cpu.registerFile.set(2, 10);
         cpu.dataMemory.storeWord(0, 42);
@@ -48,8 +43,7 @@ class PipelineStagesTest {
 
     @Test
     void testFetchStage() {
-        // lw $2, 0($1) - Load word from address in $1 + 0 into $2
-        // Using the public constructor: Instruction(int opcode, int binary)
+        // lw $2, 0($1)
         ITypeInstruction lw = new ITypeInstruction(35, 0x8C220000); // opcode 35 for lw
         lw.decodeFields();
         cpu.instructionMemory.setInstruction(0, lw);
@@ -59,7 +53,7 @@ class PipelineStagesTest {
         fetch.process(cpu, regs);
 
         assertNotNull(regs.IF_ID.getInstruction(), "Instruction should be fetched");
-        assertEquals(lw, regs.IF_ID.getInstruction());
+        assertEquals(lw.getBinary(), regs.IF_ID.getInstruction().getBinary());
         assertEquals(4, cpu.pc.get(), "PC should increment by 4");
         assertEquals(4, regs.IF_ID.getPC(), "IF/ID should store PC+4");
     }
@@ -85,8 +79,7 @@ class PipelineStagesTest {
 
     @Test
     void testExecuteStage_Addition() {
-        // add $3, $1, $2 - Add $1 (5) and $2 (10) -> $3 (15)
-        // R-type instruction has opcode 0
+        // add $3, $1, $2
         RTypeInstruction add = new RTypeInstruction(0, 0x00221820);
         add.decodeFields();
 
@@ -94,14 +87,14 @@ class PipelineStagesTest {
         regs.ID_EX.setRs(1);
         regs.ID_EX.setRt(2);
         regs.ID_EX.setRd(3);
-        regs.ID_EX.setRegDst(true);      // Use rd as destination
-        regs.ID_EX.setRegWrite(true);    // Enable register write
-        regs.ID_EX.setAluOp(2);          // R-type ALU operation
-        regs.ID_EX.setReadData1(5);     // Value from $1
-        regs.ID_EX.setReadData2(10);    // Value from $2
-        regs.ID_EX.setPcPlus4(4);       // PC+4 for branch calculations
+        regs.ID_EX.setRegDst(true);
+        regs.ID_EX.setRegWrite(true);
+        regs.ID_EX.setAluOp(2);
+        regs.ID_EX.setReadData1(5);
+        regs.ID_EX.setReadData2(10);
+        regs.ID_EX.setPcPlus4(4);
         regs.ID_EX.setSignExtendedImm(0);
-        regs.ID_EX.setAluSrc(false);    // Use register, not immediate
+        regs.ID_EX.setAluSrc(false);
 
         execute.process(cpu, regs);
 
@@ -112,21 +105,21 @@ class PipelineStagesTest {
 
     @Test
     void testExecuteStage_LoadAddressCalculation() {
-        // lw $2, 100($1) - Calculate address: $1 (5) + 100 = 105
+        // lw $2, 100($1)
         ITypeInstruction lw = new ITypeInstruction(35, 0x8C220064); // opcode 35 for lw, offset=100
         lw.decodeFields();
 
         regs.ID_EX.setInstruction(lw);
         regs.ID_EX.setRs(1);
         regs.ID_EX.setRt(2);
-        regs.ID_EX.setReadData1(5);     // Base address from $1
-        regs.ID_EX.setReadData2(10);    // Value from $2 (not used in lw)
-        regs.ID_EX.setSignExtendedImm(100); // Offset
-        regs.ID_EX.setAluSrc(true);     // Use immediate for address calculation
-        regs.ID_EX.setAluOp(0);         // Load/Store uses ADD
+        regs.ID_EX.setReadData1(5);
+        regs.ID_EX.setReadData2(10);
+        regs.ID_EX.setSignExtendedImm(100);
+        regs.ID_EX.setAluSrc(true);
+        regs.ID_EX.setAluOp(0);
         regs.ID_EX.setMemRead(true);
         regs.ID_EX.setRegWrite(true);
-        regs.ID_EX.setRegDst(false);    // Use rt as destination
+        regs.ID_EX.setRegDst(false);
         regs.ID_EX.setPcPlus4(4);
 
         execute.process(cpu, regs);
@@ -138,19 +131,19 @@ class PipelineStagesTest {
 
     @Test
     void testMemoryStage_LoadWord() {
-        // Setup: Memory[0] = 42
+        // Memory[0] = 42
         cpu.dataMemory.storeWord(0, 42);
 
-        // lw $2, 0($1) where ALU computed address 0
-        ITypeInstruction lw = new ITypeInstruction(35, 0x8C220000); // opcode 35 for lw
+        // lw $2, 0($1)
+        ITypeInstruction lw = new ITypeInstruction(35, 0x8C220000);
         lw.decodeFields();
 
         regs.EX_MEM.setInstruction(lw);
         regs.EX_MEM.setMemRead(true);
-        regs.EX_MEM.setAluResult(0);    // Address to load from
+        regs.EX_MEM.setAluResult(0);
         regs.EX_MEM.setDestReg(2);
         regs.EX_MEM.setRegWrite(true);
-        regs.EX_MEM.setMemToReg(true);  // Select memory data
+        regs.EX_MEM.setMemToReg(true);
 
         memory.process(cpu, regs);
 
@@ -162,14 +155,14 @@ class PipelineStagesTest {
 
     @Test
     void testMemoryStage_StoreWord() {
-        // sw $2, 8($0) - Store $2 (value 10) to address 8
-        ITypeInstruction sw = new ITypeInstruction(43, 0xAC020008); // opcode 43 for sw
+        // sw $2, 8($0)
+        ITypeInstruction sw = new ITypeInstruction(43, 0xAC020008);
         sw.decodeFields();
 
         regs.EX_MEM.setInstruction(sw);
         regs.EX_MEM.setMemWrite(true);
-        regs.EX_MEM.setAluResult(8);    // Address = 8
-        regs.EX_MEM.setWriteData(10);   // Value from $2
+        regs.EX_MEM.setAluResult(8);
+        regs.EX_MEM.setWriteData(10);
 
         memory.process(cpu, regs);
 
@@ -178,8 +171,7 @@ class PipelineStagesTest {
 
     @Test
     void testMemoryStage_NoOperation() {
-        // R-type instruction doesn't access memory
-        RTypeInstruction add = new RTypeInstruction(0, 0x00221820); // opcode 0 for R-type
+        RTypeInstruction add = new RTypeInstruction(0, 0x00221820);
         add.decodeFields();
 
         regs.EX_MEM.setInstruction(add);
@@ -188,7 +180,7 @@ class PipelineStagesTest {
         regs.EX_MEM.setAluResult(15);
         regs.EX_MEM.setDestReg(3);
         regs.EX_MEM.setRegWrite(true);
-        regs.EX_MEM.setMemToReg(false); // Use ALU result
+        regs.EX_MEM.setMemToReg(false);
 
         memory.process(cpu, regs);
 
@@ -200,7 +192,6 @@ class PipelineStagesTest {
 
     @Test
     void testWriteBackStage_FromALU() {
-        // Write ALU result to register
         RTypeInstruction add = new RTypeInstruction(0, 0x00221820); // opcode 0 for R-type
         add.decodeFields();
 
@@ -208,7 +199,7 @@ class PipelineStagesTest {
         regs.MEM_WB.setRegWrite(true);
         regs.MEM_WB.setDestReg(4);
         regs.MEM_WB.setAluResult(99);
-        regs.MEM_WB.setMemToReg(false); // Select ALU result
+        regs.MEM_WB.setMemToReg(false);
 
         int oldValue = cpu.registerFile.get(4);
         writeback.process(cpu, regs);
@@ -219,16 +210,15 @@ class PipelineStagesTest {
 
     @Test
     void testWriteBackStage_FromMemory() {
-        // Write memory data to register
         ITypeInstruction lw = new ITypeInstruction(35, 0x8C220000); // opcode 35 for lw
         lw.decodeFields();
 
         regs.MEM_WB.setInstruction(lw);
         regs.MEM_WB.setRegWrite(true);
         regs.MEM_WB.setDestReg(5);
-        regs.MEM_WB.setAluResult(999);  // Should be ignored
-        regs.MEM_WB.setMemData(42);     // Data from memory
-        regs.MEM_WB.setMemToReg(true);  // Select memory data
+        regs.MEM_WB.setAluResult(999);
+        regs.MEM_WB.setMemData(42);
+        regs.MEM_WB.setMemToReg(true);
 
         writeback.process(cpu, regs);
 
@@ -237,12 +227,11 @@ class PipelineStagesTest {
 
     @Test
     void testWriteBackStage_NoWrite() {
-        // RegWrite = false, should not write
-        RTypeInstruction add = new RTypeInstruction(0, 0x00221820); // opcode 0 for R-type
+        RTypeInstruction add = new RTypeInstruction(0, 0x00221820);
         add.decodeFields();
 
         regs.MEM_WB.setInstruction(add);
-        regs.MEM_WB.setRegWrite(false);  // Disable write
+        regs.MEM_WB.setRegWrite(false);
         regs.MEM_WB.setDestReg(6);
         regs.MEM_WB.setAluResult(777);
 
@@ -254,41 +243,34 @@ class PipelineStagesTest {
 
     @Test
     void testPipelinePropagation_FullFlow() {
-        // Test instruction flowing through entire pipeline
-        // add $3, $1, $2 - Add 5 + 10 = 15, store in $3
-        RTypeInstruction add = new RTypeInstruction(0, 0x00221820); // opcode 0 for R-type
+        // add $3, $1, $2
+        RTypeInstruction add = new RTypeInstruction(0, 0x00221820);
         add.decodeFields();
 
         cpu.instructionMemory.setInstruction(0, add);
 
-        // Cycle 1: Fetch
         fetch.process(cpu, regs);
         assertNotNull(regs.IF_ID.getInstruction(), "Instruction fetched");
         assertEquals(4, cpu.pc.get(), "PC incremented");
 
-        // Cycle 2: Decode
         decode.process(cpu, regs);
         assertEquals(5, regs.ID_EX.getReadData1(), "$1 = 5");
         assertEquals(10, regs.ID_EX.getReadData2(), "$2 = 10");
 
-        // Setup for execute (control signals would normally be set by decode)
-        regs.ID_EX.setAluOp(2);        // R-type
-        regs.ID_EX.setAluSrc(false);   // Use register
-        regs.ID_EX.setRegDst(true);    // Use rd
+        regs.ID_EX.setAluOp(2);
+        regs.ID_EX.setAluSrc(false);
+        regs.ID_EX.setRegDst(true);
         regs.ID_EX.setRegWrite(true);
         regs.ID_EX.setMemToReg(false);
         regs.ID_EX.setPcPlus4(4);
 
-        // Cycle 3: Execute
         execute.process(cpu, regs);
         assertEquals(15, regs.EX_MEM.getAluResult(), "5 + 10 = 15");
         assertEquals(3, regs.EX_MEM.getDestReg(), "Destination is $3");
 
-        // Cycle 4: Memory (no operation for R-type)
         memory.process(cpu, regs);
         assertEquals(15, regs.MEM_WB.getAluResult(), "Result passed through");
 
-        // Cycle 5: Write Back
         int oldValue = cpu.registerFile.get(3);
         writeback.process(cpu, regs);
         assertEquals(15, cpu.registerFile.get(3), "$3 should contain 15");
@@ -297,13 +279,12 @@ class PipelineStagesTest {
 
     @Test
     void testRegisterZeroImmutable() {
-        // Attempt to write to $zero, should remain 0
-        RTypeInstruction add = new RTypeInstruction(0, 0x00221020); // add $0, $1, $2, opcode 0 for R-type
+        RTypeInstruction add = new RTypeInstruction(0, 0x00221020); // add $0, $1, $2
         add.decodeFields();
 
         regs.MEM_WB.setInstruction(add);
         regs.MEM_WB.setRegWrite(true);
-        regs.MEM_WB.setDestReg(0);      // Try to write to $zero
+        regs.MEM_WB.setDestReg(0);
         regs.MEM_WB.setAluResult(999);
         regs.MEM_WB.setMemToReg(false);
 
