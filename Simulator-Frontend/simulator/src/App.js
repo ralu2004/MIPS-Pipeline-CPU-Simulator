@@ -48,16 +48,27 @@ export default function MIPSSimulator() {
     }
   }, []);
 
- const loadProgram = async (code) => {
+  const loadProgram = useCallback(async (code) => {
   setIsLoading(true);
   try {
-    await reset();
+    // Reset state first
+    try {
+      await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
+      setCpuState(null);
+      setExecutionHistory([]);
+    } catch (resetErr) {
+      // Continue even if reset fails
+    }
 
     const cleanCode = code
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)   
     .join('\n');
+
+    if (!cleanCode) {
+      throw new Error('No code provided');
+    }
 
     const res = await fetch(`${API_BASE}/api/load?start=0`, {
       method: 'POST',
@@ -66,8 +77,15 @@ export default function MIPSSimulator() {
     });
     
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Failed to load program');
+      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+      const errorMsg = errorData.error || `HTTP ${res.status}: ${res.statusText}`;
+      
+      // Try to extract line number from error message if present
+      const lineMatch = errorMsg.match(/[Ll]ine\s+(\d+)/);
+      if (lineMatch) {
+        throw new Error(`${errorMsg} (Check line ${lineMatch[1]})`);
+      }
+      throw new Error(errorMsg);
     }
     
     const result = await res.json();
@@ -75,16 +93,20 @@ export default function MIPSSimulator() {
     
     setMessage({ 
       type: 'success', 
-      text: `Program loaded: ${result.loaded} instruction(s)` 
+      text: `Program loaded: ${result.loaded} instruction(s) at address 0x${result.start?.toString(16).toUpperCase() || '0'}` 
     });
     setTimeout(() => setMessage(null), 3000);
     setShowProgramLoader(false); 
   } catch (err) {
-    setMessage({ type: 'error', text: err.message || 'Failed to load program' });
+    setMessage({ 
+      type: 'error', 
+      text: err.message || 'Failed to load program. Check your assembly syntax.' 
+    });
+    setTimeout(() => setMessage(null), 5000);
   } finally {
     setIsLoading(false);
   }
-};
+}, [fetchState]);
 
   const step = useCallback(async (cycles = 1) => {
     setIsLoading(true);
@@ -101,7 +123,7 @@ export default function MIPSSimulator() {
     }
   }, [fetchState]);
 
-  const reset = async (showLoader = true) => {
+  const reset = useCallback(async (showLoader = true) => {
     try {
       const res = await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       if (!res.ok) throw new Error('Reset failed');
@@ -123,11 +145,27 @@ export default function MIPSSimulator() {
       setMessage({ type: 'error', text: 'Reset failed' });
       throw err; 
     }
-  };
+  }, [fetchState]);
 
   useEffect(() => {
     fetchState();
   }, [fetchState]);
+
+  const handleLoadSample = useCallback((programName) => {
+    setSelectedProgram(programName);
+    const program = SAMPLE_PROGRAMS[programName];
+    setCustomCode(program.code);
+    loadProgram(program.code);
+  }, [loadProgram]);
+
+  const handleLoadCustom = useCallback(() => {
+    if (!customCode.trim()) {
+      setMessage({ type: 'error', text: 'Please enter some code first' });
+      return;
+    }
+    setSelectedProgram('');
+    loadProgram(customCode);
+  }, [customCode, loadProgram]);
 
   useEffect(() => {
     if (isRunning) {
@@ -136,21 +174,50 @@ export default function MIPSSimulator() {
     }
   }, [isRunning, step, clockSpeed]);
 
-  const handleLoadSample = (programName) => {
-    setSelectedProgram(programName);
-    const program = SAMPLE_PROGRAMS[programName];
-    setCustomCode(program.code);
-    loadProgram(program.code);
-  };
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Don't trigger shortcuts when typing in textarea/input
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+        return;
+      }
 
-  const handleLoadCustom = () => {
-    if (!customCode.trim()) {
-      setMessage({ type: 'error', text: 'Please enter some code first' });
-      return;
-    }
-    setSelectedProgram('');
-    loadProgram(customCode);
-  };
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'Enter':
+            e.preventDefault();
+            if (customCode.trim() && !isLoading) {
+              handleLoadCustom();
+            }
+            break;
+          case 'r':
+            e.preventDefault();
+            if (!isLoading) reset();
+            break;
+          default:
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case ' ':
+            e.preventDefault();
+            if (!isLoading) setIsRunning(prev => !prev);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            if (!isLoading) {
+              step(1);
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [customCode, isLoading, step, handleLoadCustom, reset]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
@@ -188,6 +255,7 @@ export default function MIPSSimulator() {
               onClick={() => step(1)}
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Step 1 cycle (→ key)"
             >
               <StepForward className="w-4 h-4" />
               Step 1
@@ -208,6 +276,7 @@ export default function MIPSSimulator() {
                   ? 'bg-red-600 hover:bg-red-500' 
                   : 'bg-green-600 hover:bg-green-500'
               }`}
+              title="Run/Pause (Space key)"
             >
               {isRunning ? <><Pause className="w-4 h-4" />Pause</> : <><Play className="w-4 h-4" />Run</>}
             </button>
@@ -215,6 +284,7 @@ export default function MIPSSimulator() {
               onClick={reset}
               disabled={isLoading}
               className="bg-slate-600 hover:bg-slate-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              title="Reset simulator (Ctrl+R)"
             >
               <RotateCcw className="w-4 h-4" />
               Reset
@@ -240,6 +310,7 @@ export default function MIPSSimulator() {
             <button
               onClick={() => setShowProgramLoader(!showProgramLoader)}
               className="ml-auto bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm"
+              title="Toggle program loader (Ctrl+Enter to load)"
             >
               <Upload className="w-4 h-4" />
               Load Program

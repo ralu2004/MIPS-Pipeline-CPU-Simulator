@@ -1,56 +1,77 @@
-import {REGISTER_NAMES} from './Constants';
-import React, { useEffect, useRef, useState } from 'react';
-
-const REGISTER_INFO = {
-  '$zero': 'Constant value 0 (read-only)',
-  '$at': 'Assembler temporary',
-  '$v0': 'Function return value 0',
-  '$v1': 'Function return value 1',
-  '$a0': 'Function argument 0',
-  '$a1': 'Function argument 1',
-  '$a2': 'Function argument 2',
-  '$a3': 'Function argument 3',
-  '$t0': 'Temporary register 0',
-  '$t1': 'Temporary register 1',
-  '$t2': 'Temporary register 2',
-  '$t3': 'Temporary register 3',
-  '$t4': 'Temporary register 4',
-  '$t5': 'Temporary register 5',
-  '$t6': 'Temporary register 6',
-  '$t7': 'Temporary register 7',
-  '$s0': 'Saved register 0 (preserved)',
-  '$s1': 'Saved register 1 (preserved)',
-  '$s2': 'Saved register 2 (preserved)',
-  '$s3': 'Saved register 3 (preserved)',
-  '$s4': 'Saved register 4 (preserved)',
-  '$s5': 'Saved register 5 (preserved)',
-  '$s6': 'Saved register 6 (preserved)',
-  '$s7': 'Saved register 7 (preserved)',
-  '$t8': 'Temporary register 8',
-  '$t9': 'Temporary register 9',
-  '$k0': 'Kernel/OS reserved 0',
-  '$k1': 'Kernel/OS reserved 1',
-  '$gp': 'Global pointer',
-  '$sp': 'Stack pointer',
-  '$fp': 'Frame pointer',
-  '$ra': 'Return address'
-};
+import {REGISTER_NAMES, REGISTER_INFO} from './Constants';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 
 export default function RegisterGrid({ registers }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showNonZero, setShowNonZero] = useState(false);
+
   const registerArray = Array.isArray(registers) 
     ? registers 
     : Object.values(registers);
+
+  const filteredRegisters = useMemo(() => {
+    let filtered = registerArray.map((value, index) => ({
+      index,
+      name: REGISTER_NAMES[index],
+      value
+    }));
+
+    if (showNonZero) {
+      filtered = filtered.filter(r => r.value !== 0 || r.index === 0);
+    }
+
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(r => {
+        const nameMatch = r.name.toLowerCase().includes(searchLower);
+        const indexMatch = r.index.toString().includes(searchTerm);
+        const valueMatch = r.value.toString().includes(searchTerm) || 
+                         r.value.toString(16).toUpperCase().includes(searchTerm.toUpperCase());
+        return nameMatch || indexMatch || valueMatch;
+      });
+    }
+
+    return filtered;
+  }, [registerArray, showNonZero, searchTerm]);
   
   return (
-    <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
-      {registerArray.map((value, index) => (
-        <RegisterDisplay 
-          key={index} 
-          name={REGISTER_NAMES[index]} 
-          value={value}
-          index={index}
+    <div>
+      <div className="flex gap-2 mb-3 flex-wrap">
+        <input
+          type="text"
+          placeholder="Search by name, index, or value"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 min-w-[150px] bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-purple-500"
         />
-      ))}
+        <button
+          onClick={() => setShowNonZero(!showNonZero)}
+          className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
+            showNonZero
+              ? 'bg-purple-600 text-white'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          {showNonZero ? 'Show All' : 'Non-Zero Only'}
+        </button>
+      </div>
+
+      {filteredRegisters.length === 0 ? (
+        <div className="text-slate-400 text-sm text-center py-4">
+          {showNonZero ? 'No non-zero registers found' : 'No matching registers found'}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+          {filteredRegisters.map(({ index, name, value }) => (
+            <RegisterDisplay 
+              key={index} 
+              name={name} 
+              value={value}
+              index={index}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -87,29 +108,22 @@ function RegisterDisplay({ name, value, index }) {
   const info = REGISTER_INFO[name] || 'General purpose register';
 
   useEffect(() => {
-    // Skip $zero register as it never changes
     if (index === 0) return;
 
-    // Check if value has changed
     if (value !== prevValueRef.current) {
-      // Remove any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
-      // Set highlight to true
       setHighlight(true);
 
-      // Set timeout to remove highlight after 1 second
       timeoutRef.current = setTimeout(() => {
         setHighlight(false);
       }, 1000);
 
-      // Update previous value reference
       prevValueRef.current = value;
     }
 
-    // Cleanup timeout on unmount
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
