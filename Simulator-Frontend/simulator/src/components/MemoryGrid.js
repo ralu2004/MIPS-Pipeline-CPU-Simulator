@@ -14,12 +14,10 @@ export default function MemoryGrid({ memory }) {
 
     let filtered = entries;
     
-    // Filter non-zero if enabled
     if (showNonZero) {
       filtered = filtered.filter(e => e.value !== 0);
     }
 
-    // Filter by search address
     if (searchAddr.trim()) {
       const searchNum = parseInt(searchAddr, 16) || parseInt(searchAddr, 10);
       if (!isNaN(searchNum)) {
