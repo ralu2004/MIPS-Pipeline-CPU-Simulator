@@ -80,7 +80,7 @@ export default function PipelineGantt({ history }) {
                   let title = '';
 
                   if (!stageInfo) {
-                    // Empty/No data
+                    // EMPTY
                     cellContent = 'EMPTY';
                     bgColor = '#1e293b';
                     title = 'Empty';

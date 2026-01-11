@@ -102,7 +102,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
 
   return (
     <div className="space-y-6">
-      {/* Learning Topics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Object.keys(educationalContent).map(key => (
           <button
@@ -122,7 +121,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         ))}
       </div>
 
-      {/* Educational Content Panel */}
       {selectedTopic && (
         <div className="bg-slate-800 border-2 border-purple-500 rounded-lg p-5 animate-fade-in">
           <div className="flex justify-between items-start mb-3">
@@ -155,7 +153,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         </div>
       )}
 
-      {/* Pipeline Stages - Horizontal Flow */}
       <div className="bg-slate-900 rounded-lg border-2 border-slate-700 p-6">
         <h3 className="text-lg font-bold text-purple-400 mb-4">Pipeline Stages</h3>
         
@@ -188,7 +185,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
           })}
         </div>
 
-        {/* Pipeline Registers */}
         <div className="grid grid-cols-4 gap-4 mt-6">
           {pipelineRegisters.map(reg => {
             const hasData = hasInstruction(reg.data);
@@ -211,7 +207,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         </div>
       </div>
 
-      {/* Pipeline Register Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* IF/ID Register */}
         <div className="bg-slate-800 border border-blue-500 rounded-lg p-4">
@@ -317,7 +312,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         </div>
       </div>
 
-      {/* Active Control Signals */}
       <div className="bg-slate-800 border border-slate-600 rounded-lg p-4">
         <h4 className="font-bold text-purple-400 mb-3">Active Control Signals</h4>
         <div className="flex flex-wrap gap-2">
@@ -351,7 +345,6 @@ export default function PipelineDiagram({ pipeline, currentSnapshot }) {
         </div>
       </div>
 
-      {/* Usage Guide */}
       <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-4">
         <div className="flex items-start gap-2">
           <Info className="text-blue-400 mt-0.5" size={20} />

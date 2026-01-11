@@ -22,7 +22,7 @@ export default function MIPSSimulator() {
   const [showProgramLoader, setShowProgramLoader] = useState(true);
   const [pipelineView, setPipelineView] = useState('detailed'); 
   const [executionHistory, setExecutionHistory] = useState([]);
-  const [clockSpeed, setClockSpeed] = useState(500); // milliseconds per cycle
+  const [clockSpeed, setClockSpeed] = useState(500); 
 
   const fetchState = useCallback(async () => {
     try {
@@ -51,14 +51,11 @@ export default function MIPSSimulator() {
   const loadProgram = useCallback(async (code) => {
   setIsLoading(true);
   try {
-    // Reset state first
     try {
       await fetch(`${API_BASE}/api/reset?clearRegs=1&clearMem=1&pc=0`, { method: 'POST' });
       setCpuState(null);
       setExecutionHistory([]);
-    } catch (resetErr) {
-      // Continue even if reset fails
-    }
+    } catch (resetErr) {}
 
     const cleanCode = code
     .split('\n')
@@ -79,8 +76,6 @@ export default function MIPSSimulator() {
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
       const errorMsg = errorData.error || `HTTP ${res.status}: ${res.statusText}`;
-      
-      // Try to extract line number from error message if present
       const lineMatch = errorMsg.match(/[Ll]ine\s+(\d+)/);
       if (lineMatch) {
         throw new Error(`${errorMsg} (Check line ${lineMatch[1]})`);
@@ -174,10 +169,9 @@ export default function MIPSSimulator() {
     }
   }, [isRunning, step, clockSpeed]);
 
-  // Keyboard shortcuts
+  // keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
-      // Don't trigger shortcuts when typing in textarea/input
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
         return;
       }

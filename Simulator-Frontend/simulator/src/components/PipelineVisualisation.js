@@ -153,8 +153,6 @@ const StageCard = ({ stage, index }) => {
                     <span className="text-xs text-slate-400 ml-2">{stage.label}</span>
                   </div>
                 </div>
-                
-                
               </div>
             </div>
             

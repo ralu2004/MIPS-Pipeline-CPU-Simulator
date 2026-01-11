@@ -18,25 +18,7 @@ export const SAMPLE_PROGRAMS = {
     code: 'addi $t0, $zero, 15\naddi $t1, $zero, 15\nadd $t2, $t0, $t1\nbeq $t0, $t1, 2\nsub $t3, $t0, $t2\nand $t5, $t1, $t2',
     description: 'Conditional branching with arithmetic',
     expectedResults: 'Expected: Branch TAKEN, $t2=30, $t3=0, $t5=0'
-  }/*,
-  'Data Hazard Demo': {
-    code: '20080007\n20090009\n01095020\n00625820\n014b6020\n018c7020',
-    assembly: 'addi $t0, $zero, 7\naddi $t1, $zero, 9\nadd $t2, $t0, $t1\nadd $t3, $t3, $t2\nadd $t4, $t2, $t3\nadd $t6, $t4, $t4',
-    description: 'Back-to-back dependencies showing forwarding',
-    expectedResults: 'Expected: $t2=16, $t3=16, $t4=32, $t6=64'
-  },
-  'Comparison Demo': {
-    code: '2008001e\n20090014\n010a502a\n200b0001\n11400002\n016c5820\n010d6822',
-    assembly: 'addi $t0, $zero, 30\naddi $t1, $zero, 20\nslt $t2, $t0, $t1\naddi $t3, $zero, 1\nbeq $t2, $t3, 2\nadd $t3, $t3, $t4\nsub $t5, $t0, $t1',
-    description: 'Set Less Than with conditional branch',
-    expectedResults: 'Expected: SLT=0 (30>20), Branch NOT taken, $t5=10'
-  },
-  'Complex Calculation': {
-    code: '20080028\n2009001e\n01095020\n01095822\n012a6824\n016b7025\n01ac782a',
-    assembly: 'addi $t0, $zero, 40\naddi $t1, $zero, 30\nadd $t2, $t0, $t1\nsub $t3, $t0, $t1\nand $t5, $t1, $t2\nor $t6, $t3, $t5\nslt $t7, $t6, $t2',
-    description: 'Multiple operations with mixed results',
-    expectedResults: 'Expected: $t2=70, $t3=10, $t5=30, $t6=30, SLT=1 (30<70)'
-  }*/
+  }
 };
 
 export const REGISTER_INFO = {

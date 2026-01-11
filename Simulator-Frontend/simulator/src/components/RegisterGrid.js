@@ -75,29 +75,7 @@ export default function RegisterGrid({ registers }) {
     </div>
   );
 }
-/*
-function RegisterDisplay({ name, value, index }) {
-  const isZero = index === 0;
-  const hasValue = value !== 0 || isZero;
-  const info = REGISTER_INFO[name] || 'General purpose register';
-  
-  return (
-    <div className={`bg-slate-900 rounded p-2 border transition-all relative group ${
-      hasValue ? 'border-purple-500/50' : 'border-slate-700'
-    }`}>
-      <div className="text-xs text-purple-400 font-bold">{name}</div>
-      <div className="font-mono text-sm text-slate-300">{value}</div>
-      <div className="text-xs text-slate-500 font-mono">
-        0x{value.toString(16).toUpperCase().padStart(8, '0')}
-      </div>
-      
-      <div className="absolute left-0 top-full mt-2 w-48 bg-slate-800 border border-purple-500 rounded-lg p-2 text-xs text-slate-300 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 shadow-xl">
-        <div className="font-bold text-purple-400 mb-1">{name}</div>
-        {info}
-      </div>
-    </div>
-  );
-}*/
+
 function RegisterDisplay({ name, value, index }) {
   const [highlight, setHighlight] = useState(false);
   const prevValueRef = useRef(value);
