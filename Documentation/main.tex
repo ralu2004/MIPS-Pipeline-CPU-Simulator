@@ -19,10 +19,6 @@
 \usepackage{pdflscape}
 \usepackage{comment}
 \usetikzlibrary{shapes, arrows, positioning}
-%\usepackage{verbatim}
-%\usepackage{mdframed}
-%\usepackage{algorithmic}
-%\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -94,7 +90,7 @@ tabsize=2
     \textit{MIPS Pipeline Architecture}\\
     \vspace{3cm}
     Name:\ Raluca-Mihaela Adam\\
-    Group:\ 30422\\
+    Group:\ 30432\\
     Email:\ adam.ra.raluca@student.utcluj.ro\\
     \vspace{12cm}
     Teaching Assistant: Dragos Lazea\\
@@ -113,18 +109,18 @@ The simulator will visualize the flow of instruction through the MIPS pipeline, 
 
 \section{Problem and Motivation}
 
-In traditional computer architecture courses, students often struggle to understand the functioning of the CPU pipeline and the types of hazards that arise during instruction execution. Existing tools, such as MARS and SPIM simulators, allow users to run MIPS assembly programs but do not provide an intuitive visualization of how instructions propagate through the pipeline.
+In traditional computer architecture courses, students often struggle to understand the functioning of the CPU pipeline and the types of hazards that arise during instruction execution. Existing tools, such as MARS \cite{mars} and SPIM \cite{spim} simulators, allow users to run MIPS assembly programs but do not provide an intuitive visualization of how instructions propagate through the pipeline.
 
 This project addresses this educational gap by providing a visual simulation software that demonstrates how instructions overlap inside a pipeline, how hazards occur, and how forwarding or stalling mechanisms resolve them in an interactive and easy-to-follow manner.
 
-\section{Objectives and Proposed Solution}
+\section{Objectives and Proposed Solution}\label{sec:objectives}
 
 The proposed application will consist of:
 \begin{itemize}
     \item An execution engine that simulates the MIPS instruction flow and pipeline stages.
     \item An intuitive graphical user interface for interactive visualization that allows users to either input custom MIPS assembly code or select predefined programs.
     \item An assembler component that converts assembly language instructions into binary machine code for execution.
-    \item The possibility to simulate 21 MIPS instructions (R, I, and J types).
+    \item The possibility to simulate 19 MIPS instructions (R, I, and J types).
     \item Real-time visualization of the 5 pipeline stages (IF, ID, EX, MEM, WB).
     \item Display of registers, memory contents, ALU operations, and control flags.
 \end{itemize}
@@ -172,15 +168,6 @@ Several existing MIPS simulators are available:
 
 In \cite{cornell}, the authors present a comprehensive theoretical explanation of the MIPS pipeline and the types of hazards, but without an interactive or visual component. 
 As a general observation, all of the existing solutions above suffer from a lack of visual representation. Thus, this project aims to provide a slightly different perspective by creating an interactive, educational simulator that focuses on how instructions move through the pipeline and how hazards affect performance.
-
-\section{Software Design Considerations}
-The simulator will follow object-oriented design principles such as modularity, encapsulation, and separation of concerns. The architecture will clearly separate:
-\begin{itemize}
-    \item the execution engine (responsible for instruction handling and pipeline state),
-    \item the data model (registers, memory, instructions), and
-    \item the user interface layer (for visualization and user interaction).
-\end{itemize}
-
 
 \chapter{Analysis}\label{ch:analysis}
 
@@ -316,7 +303,7 @@ This RTL description provides the formal specification for instruction execution
 
 \subsection{Supported Instruction Set}
 \label{subsec:supported-instructions}
-The simulator implements 21 core MIPS instructions covering arithmetic, memory, and control flow operations:
+The simulator implements 19 core MIPS instructions covering arithmetic, memory, and control flow operations:
 
 \begin{table}[H]
 \centering
@@ -519,7 +506,7 @@ The layered approach promotes separation of concerns, making the design easy to 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.3\textwidth]{fig/use_case_diagram.png}
+    \includegraphics[width=0.6\textwidth]{fig/use_case_diagram.png}
     \caption{Use case diagram showing user interactions with the simulator.}
     \label{fig:use_case}
 \end{figure}
@@ -528,14 +515,17 @@ As illustrated in Figure~\ref{fig:use_case}, users can load a MIPS program writt
 
 \section{Simulator Components}
 
+The system's class structure is illustrated in Figure~\ref{fig:class_diagram}. The simulator is centered around the \textbf{PipelineController}, which manages clock cycles, pipeline stage coordination, and hazard handling. Each pipeline stage—\textbf{FetchStage}, \textbf{DecodeStage}, \textbf{ExecuteStage}, \textbf{MemoryStage}, and \textbf{WriteBackStage}—is represented by a dedicated class responsible for its specific functionality.
+
+\begin{landscape}
+\thispagestyle{empty}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1.0\textwidth]{fig/class_diagram.png}
+    \includegraphics[width=1.315\textwidth]{fig/class_diagram.png}
     \caption{Class diagram showing main system components and their relationships.}
     \label{fig:class_diagram}
 \end{figure}
-
-Figure~\ref{fig:class_diagram} illustrates the system's class structure. The simulator is centered around the \textbf{PipelineController}, which manages clock cycles, pipeline stage coordination, and hazard handling. Each pipeline stage—\textbf{FetchStage}, \textbf{DecodeStage}, \textbf{ExecuteStage}, \textbf{MemoryStage}, and \textbf{WriteBackStage}—is represented by a dedicated class responsible for its specific functionality.
+\end{landscape}
 
 \subsection{Core Components}
 
@@ -603,7 +593,7 @@ Each stage encapsulates its corresponding MIPS pipeline function:
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.3\textwidth]{fig/data_flow.png}
+    \includegraphics[width=0.6\textwidth]{fig/data_flow.png}
     \caption{Data flow diagram illustrating information exchange between components.}
     \label{fig:data_flow}
 \end{figure}
@@ -647,7 +637,7 @@ During each clock cycle, the following sequence occurs:
 
 \chapter{Implementation}\label{ch:implementation}
 
-This chapter presents the implementation of the simulator, with a focus on the Java backend and the web API for frontend communication. The implementation follows the architectural design of Chapter~\ref{ch: design} to build a functioning simulation engine with an intuitive user interface.
+This chapter presents the implementation of the simulator, with a focus on the Java backend and the web API for frontend communication. The implementation follows the architectural design of Chapter~\ref{ch:design} to build a functioning simulation engine with an intuitive user interface.
 
 \section{Backend Implementation}
 \subsection{Overall Architecture}
@@ -656,8 +646,9 @@ The backend implementation follows a modular, object-oriented architecture that 
 
 \begin{itemize}
     \item \textbf{model.instruction:} Contains classes representing MIPS instructions (R-type, I-type, J-type) and their decoding logic.
-    \item \textbf{model.cpu:} Implements CPU state components, including the register file, program counter, and memory subsystems.
+    \item \textbf{model.cpu:} Implements CPU state components, including the register file and program counter.
     \item \textbf{model.control:} Houses the control unit, hazard detection unit, forwarding unit, and stall unit.
+    \item \textbf{model.memory:} Implements the instruction and data memories.
     \item \textbf{model.pipeline.stages:} Contains the five pipeline stage implementations (Fetch, Decode, Execute, Memory, WriteBack).
     \item \textbf{model.pipeline.registers:} Implements pipeline registers that buffer data between stages.
     \item \textbf{model.pipeline.state:} Contains classes responsible for capturing and representing the current state of the pipeline stages during simulation. These classes provide a snapshot of pipeline activity, enabling visualization and state tracking throughout the execution process.
@@ -682,12 +673,13 @@ public abstract class Instruction {
     public int getBinary() { return binary; }
 
     public abstract void decodeFields();
+    public abstract Instruction copy();
 }
 \end{lstlisting}
 
 \subsection*{R-Type Instruction}
 
-The \textbf{RTypeInstruction} class extracts its fields (two source registers, destination register, shift amount and function code) using bit shifting and masking:
+The \textbf{RTypeInstruction} class extracts its fields (two source registers, destination register, shift amount, and function code) using bit shifting and masking:
 
 \begin{lstlisting}[style=javaStyle]
 @Override
@@ -732,16 +724,16 @@ public void decodeFields() {
 \subsection*{Instruction Memory}
 The \textbf{InstructionMemory} class stores and provides access to instruction objects in a fixed-size, word-aligned memory array (4 KB = 1024 words). The class provides methods for accessing the contents:
 \begin{itemize}
-    \item Call \textbf{setInstruction(int, Instruction)} to store an instruction at a given address.
-    \item Call \textbf{fetch(int)} to retrieve the instruction from a given address.
+    \item \textbf{setInstruction(int, Instruction)} stores an instruction at a given address.
+    \item \textbf{fetch(int)} retrieves the instruction from a given address.
 \end{itemize}
 If an address is outside the valid range (0--4092), \textbf{fetch()} returns \texttt{null} and \textbf{setInstruction()} does nothing.
 
 \subsection*{Data Memory}
 The \textbf{DataMemory} class provides word-aligned load and store operations for reading and writing 32-bit values through \textbf{loadWord(int)} and \textbf{storeWord(int, int)} methods. Out-of-range addresses are safely ignored:
 \begin{itemize}
-    \item \texttt{loadWord(int)} returns 0 for invalid addresses.
-    \item \texttt{storeWord(int, int)} does nothing for invalid addresses.
+    \item \textbf{loadWord(int)} returns 0 for invalid addresses.
+    \item \textbf{storeWord(int, int)} does nothing for invalid addresses.
 \end{itemize}
 
 \subsection{CPU State Components}
@@ -797,7 +789,7 @@ The \textbf{ControlUnit} class implements the control logic designed in Section~
 
 \subsection*{Hazard Detection Unit}
 
-The \textbf{HazardDetectionUnit} implements the hazard detection mechanism described in the design. It monitors the \textbf{PipelineRegisters} to detect data, control, and structural hazards through dedicated methods: \textbf{checkDataHazards(regs)}, \textbf{checkControlHazards(regs)}, \textbf{checkStructuralHazards(regs)}. 
+The \textbf{HazardDetectionUnit} implements the hazard detection mechanism described in Section~\ref{ch:design}. It monitors the \textbf{PipelineRegisters} to detect data, control, and structural hazards through dedicated methods: \textbf{checkDataHazards(regs)}, \textbf{checkControlHazards(regs)}, \textbf{checkStructuralHazards(regs)}. 
 
 It reports detected hazards through a \textbf{HazardReport} object, which lists all detected conditions and indicates whether stalling or flushing is required. Supporting units such as \textbf{ForwardingUnit} and \textbf{StallUnit} use this information to apply the appropriate solution.
 
@@ -903,7 +895,6 @@ The pipeline register classes implement the buffering mechanism between pipeline
 \end{itemize}
 
 The method \textbf{getWriteData()} selects between ALU result and memory data based on the \texttt{memToReg} signal.
-
 
 \subsection*{Pipeline State}
 
@@ -1326,7 +1317,14 @@ This design ensures that the frontend receives meaningful error messages and can
 
 \section{Frontend Implementation}
 
-The frontend of the Simulator is implemented as a React web application which provides an interactive visualization interface for the simulation. Built with modern React patterns and Tailwind CSS, it offers real-time visualization of pipeline stages, register states, and memory contents.
+The frontend of the Simulator is implemented as a React web application which provides an interactive visualization interface for the simulation as depicted in Figure \ref{fig:ui}. Built with modern React patterns and Tailwind CSS, it offers real-time visualization of pipeline stages, register states, and memory contents.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{fig/ui.png}
+    \caption{Application Overview}
+    \label{fig:ui}
+\end{figure}
 
 \subsection{Application Architecture}
 
@@ -1342,14 +1340,15 @@ The interface supports both predefined sample programs and custom user code with
 
 The application provides three distinct pipeline visualization modes:
 \begin{itemize}
-    \item \textbf{Detailed Pipeline View:} a vertical stack of all five stages with instruction information, such as including hex codes, program counters, and destination registers;
-    \item \textbf{Pipeline Diagram View:} horizontal representation with color-coded stages and integrated data path visualization, showing real-time component activity including pipeline registers components, register file operations, ALU computations, and memory access patterns; 
-    \item \textbf{Pipeline Gantt Chart:} provides temporal analysis through a cycle-by-cycle tabular display that tracks instruction progression and visually identifies pipeline hazards through color-coded states, including stalls, bubbles, and flushes.
+    \item \textbf{Trace Mode:} a vertical stack of all five stages with instruction information, such as including hex codes, program counters, and destination registers; control signals display, and hazards display can be enabled/disabled by the user;
+    \item \textbf{Learning Mode:} horizontal representation with color-coded stages and integrated data path visualization, showing real-time component activity including pipeline registers components, register file operations, ALU computations, and memory access patterns, as well as learning content;
+    \item \textbf{Timeline Diagram:} provides temporal analysis through a cycle-by-cycle tabular display that tracks instruction progression and visually identifies pipeline hazards through color-coded states, including stalls, bubbles, and flushes.
 \end{itemize}
 
 \subsubsection{Data Display Components}
 
 The \textbf{Register Grid} displays all 32 MIPS registers with dual decimal and hexadecimal representation, featuring hover tooltips that explain each register's architectural purpose and visual highlighting for active registers. 
+
 
 The \textbf{Memory Grid} shows data memory contents with proper address-value mapping and hexadecimal formatting, providing insight into memory access patterns during program execution. 
 
@@ -1578,7 +1577,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 1: Basic Arithmetic Operations}
 \label{tab:test1}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1597,7 +1596,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 11: Negative Number Arithmetic}
 \label{tab:test11}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1615,7 +1614,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 12: Overflow Behavior}
 \label{tab:test12}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1635,7 +1634,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 8: Bitwise Logical Operations}
 \label{tab:test8}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1656,7 +1655,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 9: Set Less Than (SLT)}
 \label{tab:test9}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1675,7 +1674,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 24: Immediate Logical Operations}
 \label{tab:test24}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1697,7 +1696,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 21: Shift Left Logical (SLL)}
 \label{tab:test21}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1717,7 +1716,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 22: Shift Right Logical (SRL)}
 \label{tab:test22}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1738,7 +1737,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 4: Basic Load/Store Operations}
 \label{tab:test4}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1759,7 +1758,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 13: Sequential Memory Access}
 \label{tab:test13}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1779,7 +1778,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 16: Offset Addressing with Negative Offsets}
 \label{tab:test16}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1799,7 +1798,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 29: Memory Sign Extension and Edge Cases}
 \label{tab:test29}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1821,7 +1820,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 5: Branch Equal (Taken)}
 \label{tab:test5}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1841,7 +1840,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 6: Branch Equal (Not Taken)}
 \label{tab:test6}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1861,7 +1860,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 7: Branch Not Equal}
 \label{tab:test7}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1881,7 +1880,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 23: Jump and Link (JAL)}
 \label{tab:test23}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1901,7 +1900,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 14: Loop Counter Implementation}
 \label{tab:test14}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1923,7 +1922,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 2: RAW Data Hazard with Forwarding}
 \label{tab:test2}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1944,7 +1943,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 3: Load-Use Hazard with Stall}
 \label{tab:test3}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1965,7 +1964,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 17: Multiple Consecutive RAW Hazards}
 \label{tab:test17}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -1986,7 +1985,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 26: Complex Pipeline Hazard Chains}
 \label{tab:test26}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -2010,7 +2009,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 10: Zero Register Immutability}
 \label{tab:test10}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -2029,7 +2028,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 15: Fibonacci Sequence Computation}
 \label{tab:test15}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Assembly Code} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -2051,7 +2050,7 @@ The integration tests validate the complete pipeline behavior using assembly pro
 \caption{Test 20: Stress Test - Multiple Operations}
 \label{tab:test20}
 \small
-\begin{tabular}{|p{5.5cm}|p{3cm}|p{3cm}|}
+\begin{tabular}{|p{5.5cm}|p{4.5cm}|p{4.5cm}|}
 \hline
 \textbf{Operation Sequence} & \textbf{Expected} & \textbf{Actual} \\
 \hline
@@ -2148,17 +2147,34 @@ The test suite validates that the MIPS pipeline simulator correctly implements:
     \item Edge case behavior, including overflow and negative numbers
 \end{itemize}
 
-The 100\% pass rate across diverse test cases demonstrates the robustness and correctness of the implementation. Each component functions correctly in isolation and integrates properly within the pipeline, confirming that the design specifications are successfully met.
+The 100\% pass rate across diverse test cases demonstrates that each component functions correctly in isolation and integrates properly within the pipeline, confirming that the design specifications are successfully met.
+
+\chapter{Conclusions}\label{ch:conlusions}
+
+This project successfully builds a CPU simulator that models the 5-stage MIPS pipeline architecture with comprehensive visualization capabilities. The simulator addresses a significant gap in computer architecture education by making the invisible internal operation of a pipelined processor visible and interactive. 
+
+\section{Achievement of Objectives}
+All objectives established in Section \ref{sec:objectives} were accomplished. The simulator implements 19 MIPS instructions (R-type, I-type, and J-type), simulates all five pipeline stages (IF, ID, EX, MEM, WB), and provides complete hazard detection and resolution mechanisms. An intuitive graphical user interface provides real-time visualization of all core components and learning instruments.
+
+\section{Limitations}
+The simulator focuses on educational fundamentals rather than complete realism. It implements 19 core MIPS instructions but omits multiplication, division, and floating-point operations. The memory model uses simplified Harvard architecture without cache hierarchies or latency modeling. Branch prediction employs a basic predict-not-taken strategy rather than sophisticated modern mechanisms. 
+
+\section{Lessons Learned}
+Implementing the simulator deepened the developer's understanding of the subtle interactions between pipeline stages and the complexity of maintaining correctness during concurrent instruction execution. 
+The comprehensive testing strategy proved essential. Several subtle bugs were discovered only through integration testing with complex instruction sequences that exercised multiple hazard scenarios simultaneously.
+
+\section{Final Remarks}
+The MIPS pipeline simulator successfully bridges the gap between theoretical computer architecture instruction and practical understanding. By making pipeline operation visible and interactive, it enables students to develop intuition about instruction-level parallelism, hazard detection, and performance optimization. 
+
 
 \printbibliography
 \nocite{*}
 
+\vfill
 \vspace{2cm}
 \begin{center}
   Distributed systems (DS)\\
   \includegraphics[width=10cm]{fig/footer}
 \end{center}
-
-
 
 \end{document}

@@ -17,13 +17,6 @@ public class ForwardingUnit {
         int exRs = regs.ID_EX.getRs();
         int exRt = regs.ID_EX.getRt();
 
-        // System.out.println("DEBUG Forwarding Unit:");
-        // System.out.println("  ID/EX Rs=" + exRs + ", Rt=" + exRt);
-        // System.out.println("  EX/MEM destReg=" + regs.EX_MEM.getDestReg() +
-        //         ", RegWrite=" + regs.EX_MEM.isRegWrite());
-        // System.out.println("  MEM/WB destReg=" + regs.MEM_WB.getDestReg() +
-        //         ", RegWrite=" + regs.MEM_WB.isRegWrite());
-
         // EX/MEM
         // consecutive instr, dist = 1
         if (regs.EX_MEM.isRegWrite() && regs.EX_MEM.getDestReg() != 0) {
