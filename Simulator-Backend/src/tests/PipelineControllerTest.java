@@ -41,7 +41,6 @@ class PipelineControllerTest {
         cpu.instructionMemory.setInstruction(0, add1);
         cpu.instructionMemory.setInstruction(4, add2);
 
-        // Run enough cycles for both instructions to complete
         for (int i = 0; i < 7; i++) {
             controller.runCycle();
         }
@@ -49,11 +48,9 @@ class PipelineControllerTest {
         assertEquals(300, cpu.registerFile.get(6), "First add result");
         assertEquals(700, cpu.registerFile.get(7), "Second add result");
 
-        // Check pipeline progression
         var history = controller.getHistory();
         assertFalse(history.isEmpty(), "Should have pipeline history");
 
-        // Should have no stalls
         boolean hadStall = history.stream().anyMatch(snapshot ->
                 snapshot.getIfStage().getState().toString().equals("STALL") ||
                         snapshot.getIdStage().getState().toString().equals("STALL")
@@ -72,7 +69,6 @@ class PipelineControllerTest {
         cpu.instructionMemory.setInstruction(0, lw);
         cpu.instructionMemory.setInstruction(4, add);
 
-        // Track pipeline states
         int stallCount = 0;
         int bubbleCount = 0;
 
@@ -92,11 +88,8 @@ class PipelineControllerTest {
             }
         }
 
-        // Should have exactly 1 stall and 1 bubble for load-use hazard
         assertEquals(1, stallCount, "Should stall for 1 cycle due to load-use hazard");
         assertEquals(1, bubbleCount, "Should insert 1 bubble in EX stage");
-
-        // Final results
         assertEquals(12345, cpu.registerFile.get(6), "Loaded value");
         assertEquals(12545, cpu.registerFile.get(7), "Computed value after stall");
     }
@@ -137,9 +130,9 @@ class PipelineControllerTest {
 
     @Test
     void testForwardingMEMtoEX() {
-        // lw $6, 0($1)      // Load 12345
-        // nop               // Bubble
-        // add $7, $6, $2    // Forward from MEM/WB
+        // lw $6, 0($1)
+        // nop
+        // add $7, $6, $2
 
         ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
         RTypeInstruction nop = new RTypeInstruction(0, 0x00000000); // nop
@@ -195,8 +188,8 @@ class PipelineControllerTest {
 
     @Test
     void testStoreWordNoHazard() {
-        // lw $6, 0($1)      // Load 12345
-        // nop               // Bubble
+        // lw $6, 0($1)
+        // nop
         // sw $6, 4($1)      // Store to Mem[104]
 
         ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
@@ -216,8 +209,8 @@ class PipelineControllerTest {
 
     @Test
     void testStoreWordWithHazard() {
-        // lw $6, 0($1)      // Load 12345
-        // sw $6, 4($1)      // Store immediately (HAZARD!)
+        // lw $6, 0($1)
+        // sw $6, 4($1)
 
         ITypeInstruction lw = new ITypeInstruction(35, encodeIType(1, 6, 0));
         ITypeInstruction sw = new ITypeInstruction(43, encodeStore(1, 6, 4));

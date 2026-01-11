@@ -91,10 +91,6 @@ public class InstructionTest {
     @Test
     void testShiftInstructions() {
         // sll $t0, $t1, 5
-        // sll rd=8($t0), rt=9($t1), shamt=5
-        // 000000 00000 01001 01000 00101 000000
-        // 0000 0000 0000 1001 0100 0001 0100 0000
-        // = 0x00094140
         RTypeInstruction sll = new RTypeInstruction(0x00, 0x00094140);
         sll.decodeFields();
 
@@ -105,10 +101,6 @@ public class InstructionTest {
         assertEquals(0x00, sll.getFunc());
 
         // srl $t0, $t1, 5
-        // srl rd=8($t0), rt=9($t1), shamt=5, func=2
-        // 000000 00000 01001 01000 00101 000010
-        // 0000 0000 0000 1001 0100 0001 0100 0010
-        // = 0x00094142
         RTypeInstruction srl = new RTypeInstruction(0x00, 0x00094142);
         srl.decodeFields();
 
@@ -124,36 +116,8 @@ public class InstructionTest {
         RTypeInstruction instr = new RTypeInstruction(0x00, 0x012A4020);
         instr.decodeFields();
 
-        System.out.println("=== R-Type Field Debug ===");
-        System.out.println("Binary: 0x" + Integer.toHexString(instr.getBinary()));
-        System.out.println("Binary (32-bit): " + String.format("%32s",
-                Integer.toBinaryString(instr.getBinary())).replace(' ', '0'));
-        System.out.println("Fields from decoder:");
-        System.out.println("  Opcode: " + instr.getOpcode());
-        System.out.println("  Rs: " + instr.getRs());
-        System.out.println("  Rt: " + instr.getRt());
-        System.out.println("  Rd: " + instr.getRd());
-        System.out.println("  Shamt: " + instr.getShamt());
-        System.out.println("  Func: " + instr.getFunc());
-
-        System.out.println("\n=== Shift Instruction Debug ===");
         RTypeInstruction sll = new RTypeInstruction(0x00, 0x00094280);
         sll.decodeFields();
-
-        System.out.println("Binary: 0x" + Integer.toHexString(sll.getBinary()));
-        System.out.println("Binary (32-bit): " + String.format("%32s",
-                Integer.toBinaryString(sll.getBinary())).replace(' ', '0'));
-        System.out.println("Fields from decoder:");
-        System.out.println("  Opcode: " + sll.getOpcode());
-        System.out.println("  Rs: " + sll.getRs());
-        System.out.println("  Rt: " + sll.getRt());
-        System.out.println("  Rd: " + sll.getRd());
-        System.out.println("  Shamt: " + sll.getShamt());
-        System.out.println("  Func: " + sll.getFunc());
-
-        int binary = 0x00094280;
-        int shamt = (binary >> 6) & 0x1F;
-        System.out.println("Manual shamt calculation: (" + binary + " >> 6) & 0x1F = " + shamt);
     }
 
     @Test

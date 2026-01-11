@@ -197,7 +197,7 @@ public class MIPSTest {
     @DisplayName("Test 10: Zero Register Immutability")
     void testZeroRegister() {
         String[] assembly = {
-                "addi $zero, $zero, 100", // Attempt to modify $zero
+                "addi $zero, $zero, 100", // attempt to modify $zero
                 "add $t0, $zero, $zero"   // $t0 should still be 0
         };
 
@@ -229,15 +229,14 @@ public class MIPSTest {
     @DisplayName("Test 12: Overflow Test")
     void testOverflow() {
         String[] assembly = {
-                "addi $t0, $zero, 32767",     // Max positive 16-bit signed
+                "addi $t0, $zero, 32767",     // max positive 16-bit signed
                 "addi $t0, $t0, 32767",
-                "addi $t0, $t0, 2"            // Should overflow/wrap
+                "addi $t0, $t0, 2"            // should overflow/wrap
         };
 
         ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
         runCycles(7);
 
-        // Expected: 32767 + 32767 + 2 = 65536
         int expected = 32767 + 32767 + 2;
         assertEquals(expected, cpuState.registerFile.get(8), "Overflow test");
     }
@@ -462,12 +461,12 @@ public class MIPSTest {
     @DisplayName("Test 23: Jump and Link")
     void testJumpAndLink() {
         String[] assembly = {
-                "jal function",          // Jump to function, save return address in $ra
-                "j end",                // Jump over the function
+                "jal function",
+                "j end",
                 "function:",
-                "addi $t1, $zero, 42",  // Function body
-                "j end",                // Jump to end (instead of jr $ra)
-                "addi $t0, $zero, 99",  // Should execute after function returns
+                "addi $t1, $zero, 42",
+                "j end",
+                "addi $t0, $zero, 99",
                 "end:",
                 "addi $t2, $zero, 77"
         };
@@ -506,15 +505,14 @@ public class MIPSTest {
     @DisplayName("Test 25: Memory Alignment")
     void testMemoryAlignment() {
         String[] assembly = {
-                "addi $t0, $zero, 0x5678",    // Only lower 16 bits (0x5678 = 22136)
-                "sw $t0, 0($zero)",           // Store at aligned address 0
-                "sw $t0, 4($zero)",           // Store at aligned address 4
-                "lw $t1, 0($zero)",           // Load from address 0
-                "lw $t2, 4($zero)",           // Load from address 4
-                // Test negative offsets
+                "addi $t0, $zero, 0x5678",
+                "sw $t0, 0($zero)",
+                "sw $t0, 4($zero)",
+                "lw $t1, 0($zero)",
+                "lw $t2, 4($zero)",
                 "addi $t3, $zero, 100",
-                "sw $t0, -4($t3)",            // Store at address 96
-                "lw $t4, -4($t3)"             // Load from address 96
+                "sw $t0, -4($t3)",
+                "lw $t4, -4($t3)"
         };
 
         ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
@@ -532,13 +530,11 @@ public class MIPSTest {
     @DisplayName("Test 26: Complex Pipeline Hazards")
     void testComplexPipelineHazards() {
         String[] assembly = {
-                // Test back-to-back dependencies
                 "addi $t0, $zero, 1",
                 "add $t1, $t0, $t0",      // depends on $t0
                 "add $t2, $t1, $t1",      // depends on $t1
                 "add $t3, $t2, $t2",      // depends on $t2
                 "add $t4, $t3, $t3",      // depends on $t3
-                // Test alternating dependencies
                 "addi $t5, $zero, 2",
                 "addi $t6, $zero, 3",
                 "add $t7, $t5, $t6",      // depends on $t5, $t6
@@ -562,7 +558,6 @@ public class MIPSTest {
     @DisplayName("Test 27: Control Hazard Variations")
     void testControlHazardVariations() {
         String[] assembly = {
-                // Test branch delay slot (even though you resolve branches in ID)
                 "addi $t0, $zero, 1",
                 "addi $t1, $zero, 1",
                 "beq $t0, $t1, equal",
@@ -571,7 +566,6 @@ public class MIPSTest {
                 "equal:",
                 "addi $t2, $zero, 42",    // Should execute
                 "end:",
-                // Test nested branches
                 "addi $t3, $zero, 5",
                 "addi $t4, $zero, 10",
                 "slt $t5, $t3, $t4",      // $t5 = 1
@@ -600,17 +594,15 @@ public class MIPSTest {
     @DisplayName("Test 28: Zero Register Corner Cases")
     void testZeroRegisterCornerCases() {
         String[] assembly = {
-                // Various attempts to modify $zero
-                "add $zero, $zero, $zero",    // Should do nothing
-                "sub $zero, $zero, $zero",    // Should do nothing
-                "and $zero, $zero, $zero",    // Should do nothing
-                "or $zero, $zero, $zero",     // Should do nothing
-                "xor $zero, $zero, $zero",    // Should do nothing
-                "nor $zero, $zero, $zero",    // Should do nothing
-                "slt $zero, $zero, $zero",    // Should do nothing
-                "sll $zero, $zero, 5",        // Should do nothing
-                "srl $zero, $zero, 5",        // Should do nothing
-                // Using $zero as source
+                "add $zero, $zero, $zero",
+                "sub $zero, $zero, $zero",
+                "and $zero, $zero, $zero",
+                "or $zero, $zero, $zero",
+                "xor $zero, $zero, $zero",
+                "nor $zero, $zero, $zero",
+                "slt $zero, $zero, $zero",
+                "sll $zero, $zero, 5",
+                "srl $zero, $zero, 5",
                 "add $t0, $zero, $zero",      // $t0 = 0
                 "addi $t1, $zero, 100",       // $t1 = 100
                 "add $t2, $t1, $zero",        // $t2 = 100
@@ -637,37 +629,26 @@ public class MIPSTest {
     @DisplayName("Test 29: Data Memory Edge Cases")
     void testDataMemoryEdgeCases() {
         String[] assembly = {
-                // Test storing/loading with 16-bit value
-                "addi $t0, $zero, 0xBEEF",    // Only lower 16 bits (0xBEEF = -16657 in signed 16-bit)
-                "sw $t0, 0($zero)",           // Store at address 0
-                "sw $t0, 1020($zero)",        // Store near end of typical memory
+                "addi $t0, $zero, 0xBEEF",    // 0xBEEF = -16657 in signed 16-bit
+                "sw $t0, 0($zero)",           // store at address 0
+                "sw $t0, 1020($zero)",
                 "lw $t1, 0($zero)",
                 "lw $t2, 1020($zero)",
-                // Test sequential stores/loads with hazards
                 "addi $t3, $zero, 1",
-                "sw $t3, 100($zero)",         // Store 1
+                "sw $t3, 100($zero)",
                 "addi $t3, $zero, 2",
-                "sw $t3, 100($zero)",         // Store 2 (overwrite)
-                "lw $t4, 100($zero)",         // Should load 2
-                // Test load-use with different offsets
+                "sw $t3, 100($zero)",
+                "lw $t4, 100($zero)",
                 "addi $t5, $zero, 200",
-                "sw $t0, 0($t5)",             // Store at address 200
-                "lw $t6, 0($t5)",             // Load from address 200
-                "add $t7, $t6, $zero"         // Use loaded value
+                "sw $t0, 0($t5)",
+                "lw $t6, 0($t5)",
+                "add $t7, $t6, $zero"
         };
 
         ProgramLoader.loadFromAssembly(cpuState, assembly, START_ADDRESS);
         runCycles(20);
 
-        // Note: 0xBEEF as signed 16-bit is -16657
-        // But when loaded as 32-bit word, it should be sign-extended to 0xFFFFBEEF
-        // Or zero-extended depending on your implementation
-        // You need to check your sign extension logic
-        int expected = 0xFFFFBEEF; // If sign-extended
-
-        // OR if your implementation doesn't sign-extend on lw:
-        // expected = 0x0000BEEF;
-
+        int expected = 0xFFFFBEEF;
         assertEquals(expected, cpuState.registerFile.get(9), "$t1 should be 0xFFFFBEEF (sign-extended)");
         assertEquals(expected, cpuState.registerFile.get(10), "$t2 should be 0xFFFFBEEF");
         assertEquals(2, cpuState.registerFile.get(12), "$t4 should be 2");
@@ -720,20 +701,6 @@ public class MIPSTest {
     private void runCycles(int cycles) {
         for (int i = 0; i < cycles; i++) {
             pipelineController.runCycle();
-        }
-    }
-
-    @AfterEach
-    void tearDown() {
-        // Optional: Print pipeline state for debugging
-        // printPipelineState();
-    }
-
-    private void printPipelineState() {
-        List<PipelineSnapshot> history = pipelineController.getHistory();
-        System.out.println("\nPipeline History (" + history.size() + " cycles):");
-        for (int i = 0; i < history.size(); i++) {
-            System.out.printf("Cycle %2d: %s\n", i, history.get(i));
         }
     }
 }

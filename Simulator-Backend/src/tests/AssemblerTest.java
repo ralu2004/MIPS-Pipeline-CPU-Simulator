@@ -29,8 +29,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(9, result.machineCode.size(), "Should assemble 9 instructions");
-
-        // Verify format: opcode(6) | rs(5) | rt(5) | rd(5) | shamt(5) | funct(6)
         assertEquals(0x02324020, result.machineCode.get(0)); // add $t0, $s1, $s2
         assertEquals(0x014B4822, result.machineCode.get(1)); // sub $t1, $t2, $t3
         assertEquals(0x00851024, result.machineCode.get(2)); // and $v0, $a0, $a1
@@ -57,8 +55,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(5, result.machineCode.size(), "Should assemble 5 instructions");
-
-        // opcode(6) | rs(5) | rt(5) | imm(16)
         // addi $t0, $s1, 100: 0x08 | 17<<21 | 8<<16 | 100 = 0x22280064
         assertEquals(0x22280064, result.machineCode.get(0));
         // addi $t1, $s2, -50: 0x08 | 18<<21 | 9<<16 | 0xFFCE = 0x2249FFCE
@@ -85,8 +81,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(4, result.machineCode.size(), "Should assemble 4 instructions");
-
-        // Format: opcode(6) | rs(5) | rt(5) | offset(16)
         assertEquals(0x8E280064, result.machineCode.get(0)); // lw $t0, 100($s1)
         assertEquals(0xAE49FFCE, result.machineCode.get(1)); // sw $t1, -50($s2)
         assertEquals(0x8E6A007F, result.machineCode.get(2)); // lw $t2, 0x7F($s3)
@@ -115,14 +109,12 @@ public class AssemblerTest {
         assertEquals(7, result.machineCode.size(), "Should assemble 7 instructions");
 
         // beq $t0, $zero, end
-        // From address 0x00400008 to end at 0x00400018
         // Offset = (0x00400018 - (0x00400008 + 4)) / 4 = 0xC / 4 = 3
         int beqInstruction = result.machineCode.get(2);
         int beqOffset = beqInstruction & 0xFFFF;
         assertEquals(3, beqOffset, "beq offset should be 3");
 
         // bne $t0, $zero, loop
-        // From address 0x00400014 to loop at 0x00400008
         // Offset = (0x00400008 - (0x00400014 + 4)) / 4 = -0x10 / 4 = -4 = 0xFFFC
         int bneInstruction = result.machineCode.get(5);
         int bneOffset = bneInstruction & 0xFFFF;
@@ -162,9 +154,9 @@ public class AssemblerTest {
     @DisplayName("Test register aliases")
     void testRegisterAliases() {
         String[] assembly = {
-                "add $8, $17, $18",      // Same as add $t0, $s1, $s2
-                "add $t0, $17, $s2",     // Mixed notation
-                "addi $8, $17, 100",     // Using numeric register
+                "add $8, $17, $18",
+                "add $t0, $17, $s2",
+                "addi $8, $17, 100",
                 "lw $24, 100($28)"       // $24 = $t8, $28 = $gp
         };
 
@@ -172,7 +164,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(4, result.machineCode.size(), "Should assemble 4 instructions");
-
         assertEquals(0x02324020, result.machineCode.get(0));
         assertEquals(0x02324020, result.machineCode.get(1));
     }
@@ -318,8 +309,6 @@ public class AssemblerTest {
         };
 
         Assembler.AssemblyResult result = Assembler.assemble(assembly, START_ADDRESS);
-
-        // Undefined labels are treated as immediate values (will try to parse as number and fail)
         assertFalse(result.errors.isEmpty(), "Should have error for non-existent label treated as immediate");
         assertTrue(result.errors.get(0).contains("Invalid immediate"),
                 "Error should indicate invalid immediate value");
@@ -353,7 +342,6 @@ public class AssemblerTest {
         };
 
         Assembler.AssemblyResult result = Assembler.assemble(assembly, START_ADDRESS);
-
         assertTrue(result.errors.isEmpty(), "Should have no errors: " + result.errors);
         assertEquals(7, result.machineCode.size(), "Should assemble 7 instructions");
     }
@@ -372,7 +360,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should handle parentheses variations: " + result.errors);
         assertEquals(4, result.machineCode.size(), "Should assemble 4 instructions");
-
         assertEquals(0x8E280064, result.machineCode.get(0)); // lw $t0, 100($s1)
         assertEquals(0x8E490064, result.machineCode.get(1)); // lw $t1, 100($s2)
         assertEquals(0x8E6A0064, result.machineCode.get(2)); // lw $t2, 100($s3)
@@ -393,8 +380,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should handle forward references: " + result.errors);
         assertEquals(3, result.machineCode.size(), "Should assemble 3 instructions");
-
-        // j forward: target = 0x00400008 / 4 = 0x100002
         int jInstruction = result.machineCode.get(0);
         assertEquals(0x100002, jInstruction & 0x3FFFFFF, "Should correctly resolve forward reference");
     }
@@ -412,8 +397,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should handle backward references: " + result.errors);
         assertEquals(2, result.machineCode.size(), "Should assemble 2 instructions");
-
-        // j start: target = 0x00400000 / 4 = 0x100000
         int jInstruction = result.machineCode.get(1);
         assertEquals(0x100000, jInstruction & 0x3FFFFFF, "Should correctly resolve backward reference");
     }
@@ -421,12 +404,10 @@ public class AssemblerTest {
     @Test
     @DisplayName("Test large branch offset")
     void testLargeBranchOffset() {
-        // Create a program with a branch that has a large offset
         StringBuilder sb = new StringBuilder();
         sb.append("start:\n");
         sb.append("    beq $zero, $zero, far_label\n");
 
-        // Add many nops
         for (int i = 0; i < 100; i++) {
             sb.append("    add $zero, $zero, $zero\n");
         }
@@ -437,8 +418,6 @@ public class AssemblerTest {
         Assembler.AssemblyResult result = Assembler.assemble(assembly, START_ADDRESS);
 
         assertTrue(result.errors.isEmpty(), "Should handle large offsets: " + result.errors);
-
-        // Verify the branch offset
         int beqInstruction = result.machineCode.get(0);
         int offset = beqInstruction & 0xFFFF;
         assertEquals(100, offset, "Branch offset should be 100");
@@ -456,8 +435,6 @@ public class AssemblerTest {
 
         assertTrue(result.errors.isEmpty(), "Should handle label on same line: " + result.errors);
         assertEquals(2, result.machineCode.size(), "Should assemble 2 instructions");
-
-        // j start: target = 0x00400000 / 4 = 0x100000
         int jInstruction = result.machineCode.get(1);
         assertEquals(0x100000, jInstruction & 0x3FFFFFF, "Should resolve label correctly");
     }

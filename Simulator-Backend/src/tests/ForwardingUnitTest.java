@@ -53,7 +53,6 @@ class ForwardingUnitTest {
     void testNoForwardingNeeded() {
         regs.ID_EX.setRs(1);
         regs.ID_EX.setRt(2);
-        // No RegWrite signals active in EX/MEM or MEM/WB
 
         ForwardingResult result = fu.determineForwarding(regs);
         assertEquals(0, result.forwardA);

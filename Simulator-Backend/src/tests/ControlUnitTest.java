@@ -17,7 +17,7 @@ class ControlUnitTest {
 
     @Test
     void testRTypeSignals() {
-        cu.generateSignals(0x00); // R-type (add, sub, and, or, xor, nor, sll, srl, slt)
+        cu.generateSignals(0x00);
         assertTrue(cu.isRegWrite(), "R-type should write to register");
         assertTrue(cu.isRegDst(), "R-type should use rd as destination");
         assertFalse(cu.isAluSrc(), "R-type uses register as ALU source");
@@ -31,126 +31,121 @@ class ControlUnitTest {
 
     @Test
     void testLoadWordSignals() {
-        cu.generateSignals(0x23); // lw
+        cu.generateSignals(0x23);
         assertTrue(cu.isRegWrite());
-        assertFalse(cu.isRegDst()); // rt is destination
-        assertTrue(cu.isAluSrc()); // immediate offset
-        assertTrue(cu.isMemToReg()); // load from memory to register
+        assertFalse(cu.isRegDst());
+        assertTrue(cu.isAluSrc());
+        assertTrue(cu.isMemToReg());
         assertTrue(cu.isMemRead());
         assertFalse(cu.isMemWrite());
-        assertEquals(0, cu.getAluOp()); // addition for address calculation
+        assertEquals(0, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testStoreWordSignals() {
-        cu.generateSignals(0x2B); // sw
-        assertFalse(cu.isRegWrite()); // no register write
+        cu.generateSignals(0x2B);
+        assertFalse(cu.isRegWrite());
         assertFalse(cu.isRegDst());
-        assertTrue(cu.isAluSrc()); // immediate offset
+        assertTrue(cu.isAluSrc());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isMemRead());
-        assertTrue(cu.isMemWrite()); // write to memory
-        assertEquals(0, cu.getAluOp()); // addition for address calculation
+        assertTrue(cu.isMemWrite());
+        assertEquals(0, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testBranchEqualSignals() {
-        cu.generateSignals(0x04); // beq
+        cu.generateSignals(0x04);
         assertFalse(cu.isRegWrite());
         assertFalse(cu.isRegDst());
-        assertFalse(cu.isAluSrc()); // uses registers
-        assertTrue(cu.isBranch()); // branch instruction
-        assertEquals(1, cu.getAluOp()); // subtraction for comparison
+        assertFalse(cu.isAluSrc());
+        assertTrue(cu.isBranch());
+        assertEquals(1, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testBranchNotEqualSignals() {
-        cu.generateSignals(0x05); // bne
+        cu.generateSignals(0x05);
         assertFalse(cu.isRegWrite());
         assertFalse(cu.isRegDst());
-        assertFalse(cu.isAluSrc()); // uses registers
-        assertTrue(cu.isBranch()); // branch instruction
-        assertEquals(1, cu.getAluOp()); // subtraction for comparison
+        assertFalse(cu.isAluSrc());
+        assertTrue(cu.isBranch());
+        assertEquals(1, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testAddiSignals() {
-        cu.generateSignals(0x08); // addi
+        cu.generateSignals(0x08);
         assertTrue(cu.isRegWrite());
-        assertFalse(cu.isRegDst()); // rt is destination
-        assertTrue(cu.isAluSrc()); // immediate value
+        assertFalse(cu.isRegDst());
+        assertTrue(cu.isAluSrc());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isBranch());
-        assertEquals(0, cu.getAluOp()); // addition
+        assertEquals(0, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testOrImmediateSignals() {
-        cu.generateSignals(0x0D); // ori
+        cu.generateSignals(0x0D);
         assertTrue(cu.isRegWrite());
-        assertFalse(cu.isRegDst()); // rt is destination
-        assertTrue(cu.isAluSrc()); // immediate value
+        assertFalse(cu.isRegDst());
+        assertTrue(cu.isAluSrc());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isBranch());
-        assertEquals(3, cu.getAluOp()); // OR operation
+        assertEquals(3, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testAndImmediateSignals() {
-        cu.generateSignals(0x0C); // andi
+        cu.generateSignals(0x0C);
         assertTrue(cu.isRegWrite());
-        assertFalse(cu.isRegDst()); // rt is destination
-        assertTrue(cu.isAluSrc()); // immediate value
+        assertFalse(cu.isRegDst());
+        assertTrue(cu.isAluSrc());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isBranch());
-        assertEquals(4, cu.getAluOp()); // AND operation
+        assertEquals(4, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testSetLessThanImmediateSignals() {
-        cu.generateSignals(0x0A); // slti
+        cu.generateSignals(0x0A);
         assertTrue(cu.isRegWrite());
-        assertFalse(cu.isRegDst()); // rt is destination
-        assertTrue(cu.isAluSrc()); // immediate value
+        assertFalse(cu.isRegDst());
+        assertTrue(cu.isAluSrc());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isBranch());
-        assertEquals(5, cu.getAluOp()); // SLT operation
+        assertEquals(5, cu.getAluOp());
         assertFalse(cu.isJump());
     }
 
     @Test
     void testJumpSignals() {
-        cu.generateSignals(0x02); // j
+        cu.generateSignals(0x02);
         assertFalse(cu.isRegWrite());
-        assertTrue(cu.isJump()); // jump instruction
+        assertTrue(cu.isJump());
         assertFalse(cu.isBranch());
-        // ALU signals don't matter for jump
     }
 
     @Test
     void testJumpAndLinkSignals() {
-        cu.generateSignals(0x03); // jal
-        assertTrue(cu.isRegWrite()); // writes to $ra
-        assertTrue(cu.isJump()); // jump instruction
+        cu.generateSignals(0x03);
+        assertTrue(cu.isRegWrite());
+        assertTrue(cu.isJump());
         assertFalse(cu.isBranch());
-        // ALU signals don't matter for jump
     }
 
     @Test
     void testUnknownOpcodeResetsSignals() {
-        // First set some signals
-        cu.generateSignals(0x00); // R-type
+        cu.generateSignals(0x00);
         assertTrue(cu.isRegWrite());
-
-        // Unknown opcode
-        cu.generateSignals(0xFF); // Invalid opcode
+        cu.generateSignals(0xFF);
         assertFalse(cu.isRegWrite());
         assertFalse(cu.isMemToReg());
         assertFalse(cu.isBranch());
@@ -164,7 +159,7 @@ class ControlUnitTest {
 
     @Test
     void testResetSignalsClearsAll() {
-        cu.generateSignals(0x00); // Set some signals
+        cu.generateSignals(0x00);
         cu.resetSignals();
         assertFalse(cu.isRegWrite());
         assertFalse(cu.isMemToReg());
@@ -179,7 +174,6 @@ class ControlUnitTest {
 
     @Test
     void testImmediateOperationsHaveAluSrcTrue() {
-        // All I-type instructions should have aluSrc = true
         int[] immediateOps = {0x08, 0x0C, 0x0D, 0x0A, 0x23, 0x2B}; // addi, andi, ori, slti, lw, sw
 
         for (int opcode : immediateOps) {
