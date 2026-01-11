@@ -2,15 +2,15 @@ package model.control;
 
 public class ControlUnit {
   
-    private boolean regWrite;    // Write to register file
+    private boolean regWrite;
     private boolean memToReg;    // 1 = write mem data, 0 = write ALU result
-    private boolean branch;      // Branch instruction
-    private boolean memRead;     // Load instruction
-    private boolean memWrite;    // Store instruction
+    private boolean branch;
+    private boolean memRead;
+    private boolean memWrite;
     private boolean regDst;      // 1 = rd (R-type), 0 = rt (I-type)
     private boolean aluSrc;      // 1 = immediate, 0 = register
     private int aluOp;           // ALU operation code (0, 1, or 2)
-    private boolean jump;        // Jump instruction
+    private boolean jump;
 
     public ControlUnit() {
         resetSignals();

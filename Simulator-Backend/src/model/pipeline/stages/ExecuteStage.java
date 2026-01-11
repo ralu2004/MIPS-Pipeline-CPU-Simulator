@@ -25,10 +25,6 @@ public class ExecuteStage implements PipelineStage {
 
         ForwardingUnit.ForwardingResult forwarding = forwardingUnit.determineForwarding(regs);
 
-        // System.out.println("Forwarding: forwardA=" + forwarding.forwardA + ", forwardB=" + forwarding.forwardB);
-        // System.out.println("MEM_WB.writeData=" + regs.MEM_WB.getWriteData());
-        // System.out.println("EX_MEM.aluResult=" + regs.EX_MEM.getAluResult());
-
         boolean isShift = false;
         int shamt = 0;
         if (instr instanceof RTypeInstruction) {
@@ -69,8 +65,6 @@ public class ExecuteStage implements PipelineStage {
         boolean zeroFlag = false;
         int aluOp = regs.ID_EX.getAluOp();
 
-        // System.out.println("A= " + aluInputA + " B= " + aluInputB);
-
         if (aluOp == 0) {
             aluResult = aluInputA + aluInputB;
         } else if (aluOp == 1) {
@@ -101,11 +95,8 @@ public class ExecuteStage implements PipelineStage {
         }
 
         int destReg = regs.ID_EX.isRegDst() ? regs.ID_EX.getRd() : regs.ID_EX.getRt();
-        // System.out.println("EX Stage: opcode=" + instr.getOpcode() + ", RegDst=" + regs.ID_EX.isRegDst() + ", destReg=" + destReg);
-
         // branch
         int branchTarget = pcPlus4 + (signExtendedImm << 2);
-        //boolean branchTaken = regs.ID_EX.isBranch() && zeroFlag;
         boolean branchTaken = false;
         if (regs.ID_EX.isBranch()) {
             switch(instr.getOpcode()) {

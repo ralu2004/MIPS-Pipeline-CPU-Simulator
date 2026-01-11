@@ -19,10 +19,6 @@ public class MemoryStage implements PipelineStage {
             return;
         }
 
-       /* if (exMem.isBranch() && exMem.isBranchTaken()) {
-            cpuState.pc.set(exMem.getBranchTarget());
-        }*/
-
         int aluResult = exMem.getAluResult();
         int writeData = exMem.getWriteData();
         boolean memRead = exMem.isMemRead();

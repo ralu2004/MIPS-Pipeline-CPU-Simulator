@@ -125,10 +125,6 @@ public class HazardDetectionUnit {
             return !hazards.isEmpty();
         }
 
-        public List<String> getHazards() {
-            return hazards;
-        }
-
         public boolean hasLoadUseHazard() {
             return hazards.stream().anyMatch(h -> h.contains("LOAD_USE_HAZARD"));
         }
